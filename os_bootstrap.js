@@ -1,5 +1,5 @@
 /**
- * Win11Web Architecture OS Layer Clone - Complete Master Suite
+ * Win11Web Architecture OS Layer Clone - Unified Core Suite
  * Built cleanly on top of the WebKernel API ecosystem.
  */
 
@@ -364,26 +364,43 @@ function setupContextMenuListeners() {
 
         if (targetExpFile) {
             const filePath = targetExpFile.dataset.filePath;
-            const isDir = !filePath.split('/').pop().includes('.');
+            const fileName = filePath.split('/').pop();
+            const isDir = !fileName.includes('.');
+            const isExecutable = fileName.endsWith('.js') || fileName.endsWith('.html');
             
-            menuOptions = [
-                isDir ? { label: "📁 Open Folder View", action: () => {
-                    const expContainer = targetExpFile.closest('.exp-window-container').parentNode;
-                    renderWinExplorerWindow(filePath);
-                    expContainer.remove(); // Clean up old workspace window reference
-                }} : { label: "🚀 Open in VS Code", action: () => launchWinApp('vscode', filePath) },
-                { label: "🗑️ Delete Reference", action: () => {
+            if (isDir) {
+                menuOptions.push({ 
+                    label: "📁 Open Folder View", 
+                    action: () => {
+                        const expContainer = targetExpFile.closest('.exp-window-container').parentNode;
+                        renderWinExplorerWindow(filePath);
+                        expContainer.remove(); 
+                    }
+                });
+            } else {
+                if (isExecutable) {
+                    menuOptions.push({ 
+                        label: "🏃‍♂️ Run Executable", 
+                        action: () => executeVirtualScript(filePath) 
+                    });
+                }
+                menuOptions.push({ label: "🚀 Open in VS Code", action: () => launchWinApp('vscode', filePath) });
+            }
+
+            menuOptions.push({ 
+                label: "🗑️ Delete Reference", 
+                action: () => {
                     sendFileToRecycleBin(filePath);
                     const expWin = targetExpFile.closest('.exp-window-container').parentNode;
                     if (expWin.refreshExplorerInstance) expWin.refreshExplorerInstance();
-                }}
-            ];
+                }
+            });
         } 
         else if (targetExpPane) {
             const activeDir = targetExpPane.dataset.currentDir;
             menuOptions = [
                 { label: "➕ Create New File Container", action: () => {
-                    const filename = prompt("Enter target filename (e.g. format.js):");
+                    const filename = prompt("Enter target filename (e.g. app.js):");
                     if (!filename) return;
                     Kernel.vfs.writeFile(`${activeDir}/${filename}`, "// Code file details\n", "text/plain");
                     const expWin = targetExpPane.closest('.exp-window-container').parentNode;
@@ -405,11 +422,16 @@ function setupContextMenuListeners() {
                     { label: "Open Recycle Bin", action: () => launchWinApp('recycle') },
                     { label: "Empty Recycle Bin", action: () => { recycleBinStorage = []; refreshWinDesktop(); } }
                 ];
-            } else {
-                menuOptions = [
-                    { label: "🚀 Open in VS Code", action: () => launchWinApp('vscode', filePath) },
-                    { label: "🗑️ Move to Recycle Bin", action: () => sendFileToRecycleBin(filePath) }
-                ];
+            } else if (filePath) {
+                const fileName = filePath.split('/').pop();
+                if (fileName.endsWith('.js') || fileName.endsWith('.html')) {
+                    menuOptions.push({ 
+                        label: "🏃‍♂️ Run Executable", 
+                        action: () => executeVirtualScript(filePath) 
+                    });
+                }
+                menuOptions.push({ label: "🚀 Open in VS Code", action: () => launchWinApp('vscode', filePath) });
+                menuOptions.push({ label: "🗑️ Move to Recycle Bin", action: () => sendFileToRecycleBin(filePath) });
             }
         } else if (targetTaskbarApp) {
             const appType = targetTaskbarApp.dataset.appType;
@@ -474,6 +496,42 @@ function sendFileToRecycleBin(path) {
         Kernel.vfs.remove(path);
         refreshWinDesktop();
     } catch(e) { alert(e.message); }
+}
+
+/**
+ * ⚡ DYNAMIC SCRIPT RUNTIME ENGINE
+ * Reads files from VFS and executes them within the OS sandbox layer context.
+ */
+function executeVirtualScript(path) {
+    try {
+        const rawContent = Kernel.vfs.readFile(path);
+        
+        if (path.endsWith('.html')) {
+            const win = Kernel.createWindow({
+                title: path.split('/').pop(),
+                width: 500,
+                height: 400,
+                x: 180,
+                y: 100
+            });
+            win.contentElement.style.background = "#ffffff";
+            win.contentElement.style.color = "#000000";
+            win.contentElement.innerHTML = rawContent;
+            
+            const scriptTags = win.contentElement.querySelectorAll("script");
+            scriptTags.forEach(oldScript => {
+                const newScript = document.createElement("script");
+                newScript.text = oldScript.text;
+                document.head.appendChild(newScript).parentNode.removeChild(newScript);
+            });
+        } 
+        else if (path.endsWith('.js')) {
+            const secureExecution = new Function("Kernel", rawContent);
+            secureExecution(window.Kernel);
+        }
+    } catch (err) {
+        alert("Execution Error:\n" + err.message);
+    }
 }
 
 function launchWinApp(type, pathArg = "") {
