@@ -1,5 +1,5 @@
 /**
- * Win11Web Architecture OS Layer Clone - Unified Core Suite
+ * Win11Web Architecture OS Layer Clone - Unified Core Suite v3.5
  * Built cleanly on top of the WebKernel API ecosystem.
  */
 
@@ -516,6 +516,8 @@ function executeVirtualScript(path) {
             });
             win.contentElement.style.background = "#ffffff";
             win.contentElement.style.color = "#000000";
+            win.contentElement.style.height = "100%";
+            win.contentElement.style.overflow = "auto";
             win.contentElement.innerHTML = rawContent;
             
             const scriptTags = win.contentElement.querySelectorAll("script");
@@ -534,6 +536,82 @@ function executeVirtualScript(path) {
     }
 }
 
+/**
+ * 💻 NATIVE PORT: Virtual OS Command Terminal
+ */
+function renderTerminalWindow() {
+    const win = Kernel.createWindow({
+        title: "Terminal Console",
+        width: 600,
+        height: 380,
+        x: 160,
+        y: 90
+    });
+
+    win.contentElement.innerHTML = `
+        <div class="term-container" style="background:#0c0c0c; color:#00ff00; font-family:'Consolas', monospace; font-size:13px; height:100%; display:flex; flex-direction:column; padding:10px; box-sizing:border-box;">
+            <div class="term-history" id="term-log-view" style="flex:1; overflow-y:auto; white-space:pre-wrap; line-height:1.4; margin-bottom:5px;">Win11Web Command Console [Version 10.0.2026]\n(c) 2026 Microsoft/WebKernel. All rights reserved.\n\nType "help" to list available subsystem variables.\n</div>
+            <div class="term-input-line" style="display:flex; align-items:center; gap:5px;">
+                <span class="term-prompt" style="color:#60cdff; user-select:none;">VFS:\\></span>
+                <input type="text" id="term-input-field" style="flex:1; background:transparent; border:none; color:#00ff00; font-family:'Consolas', monospace; font-size:13px; outline:none;" autocomplete="off" autofocus />
+            </div>
+        </div>
+    `;
+
+    const logView = win.contentElement.querySelector("#term-log-view");
+    const inputField = win.contentElement.querySelector("#term-input-field");
+
+    inputField.onkeydown = (e) => {
+        if (e.key === "Enter") {
+            const rawCmd = inputField.value.trim();
+            inputField.value = "";
+            if (!rawCmd) return;
+
+            logView.innerText += `\nVFS:\\> ${rawCmd}\n`;
+            
+            const parts = rawCmd.split(" ");
+            const command = parts[0].toLowerCase();
+            const arg = parts.slice(1).join(" ");
+
+            switch(command) {
+                case 'help':
+                    logView.innerText += "Available options: clear, dir, echo [str], read [path], rm [path], ver";
+                    break;
+                case 'ver':
+                    logView.innerText += "Win11Web Subsystem Core Kernel Runtime v3.5 (2026 Edition)";
+                    break;
+                case 'clear':
+                    logView.innerText = "";
+                    break;
+                case 'echo':
+                    logView.innerText += arg;
+                    break;
+                case 'dir':
+                    try {
+                        const items = Kernel.vfs.readDir("/desktop");
+                        logView.innerText += items.map(i => `   ${i.path.split('/').pop()}`).join('\n');
+                    } catch(err) { logView.innerText += `Error reading workspace: ${err.message}`; }
+                    break;
+                case 'read':
+                    try {
+                        logView.innerText += Kernel.vfs.readFile(arg);
+                    } catch(err) { logView.innerText += `VFS Read Error: ${err.message}`; }
+                    break;
+                case 'rm':
+                    try {
+                        Kernel.vfs.remove(arg);
+                        logView.innerText += `Node reference deleted: ${arg}`;
+                        refreshWinDesktop();
+                    } catch(err) { logView.innerText += `VFS Target Drop Error: ${err.message}`; }
+                    break;
+                default:
+                    logView.innerText += `"${command}" is not recognized as an internal virtual command module mapping.`;
+            }
+            logView.scrollTop = logView.scrollHeight;
+        }
+    };
+}
+
 function launchWinApp(type, pathArg = "") {
     document.getElementById("win-start-menu").classList.add("win-menu-hidden");
     closeContextMenu();
@@ -550,7 +628,7 @@ function launchWinApp(type, pathArg = "") {
 
     switch(type) {
         case 'terminal':
-            Kernel.process.launchFromFile("/apps/terminal.js").catch(err => alert(err.message));
+            renderTerminalWindow();
             break;
         case 'explorer':
             renderWinExplorerWindow();
