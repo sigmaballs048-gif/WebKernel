@@ -226,6 +226,10 @@ function injectAdvancedWindowControls(winId) {
 /**
  * 📁 ADVANCED INTEGRATION: Windows 11 File Explorer Application
  */
+/**
+ * 📁 ADVANCED INTEGRATION: Windows 11 File Explorer Application
+ * Now with full support for nested folders, directory traversal, and distinct icons!
+ */
 function renderWinExplorerWindow(initialDir = "/desktop") {
     const win = Kernel.createWindow({
         title: "File Explorer",
@@ -238,6 +242,12 @@ function renderWinExplorerWindow(initialDir = "/desktop") {
     let currentDir = initialDir;
 
     const renderContents = () => {
+        // Clean up trailing slashes for neat path formatting
+        if (currentDir !== "/" && currentDir.endsWith("/")) {
+            currentDir = currentDir.slice(0, -1);
+        }
+        if (!currentDir) currentDir = "/";
+
         win.contentElement.innerHTML = `
             <div class="exp-window-container">
                 <div class="exp-toolbar">
@@ -270,6 +280,65 @@ function renderWinExplorerWindow(initialDir = "/desktop") {
                 renderContents();
             };
         });
+
+        // Parse VFS Files & Folders
+        try {
+            const nodes = Kernel.vfs.readDir(currentDir);
+            if (nodes.length === 0) {
+                gridView.innerHTML = `<div class="exp-empty-state">This folder is completely empty.</div>`;
+            }
+
+            nodes.forEach(node => {
+                const itemEl = document.createElement("div");
+                itemEl.className = "exp-file-card";
+                itemEl.dataset.filePath = node.path;
+                
+                // 🔍 SMART CHECK: Is it a directory or a file?
+                // Checks if kernel explicitly flags it as a dir, or if it lacks a file extension type
+                const isDirectory = node.type === 'dir' || node.type === 'directory' || (!node.path.includes('.'));
+                const isJs = node.path.endsWith(".js");
+
+                // Assign the correct icon based on object type
+                let icon = "📄";
+                if (isDirectory) icon = "📁";
+                else if (isJs) icon = "🟦";
+
+                itemEl.innerHTML = `
+                    <div class="file-card-icon">${icon}</div>
+                    <div class="file-card-label">${node.path.split("/").pop()}</div>
+                `;
+
+                // DOUBLE CLICK ROUTING PIPELINE
+                itemEl.ondblclick = () => {
+                    if (isDirectory) {
+                        // Move down into the folder instead of opening code editor
+                        currentDir = node.path;
+                        renderContents();
+                    } else {
+                        // Fire up VS Code for raw files
+                        launchWinApp('vscode', node.path);
+                    }
+                };
+
+                gridView.appendChild(itemEl);
+            });
+        } catch(e) {
+            gridView.innerHTML = `<div class="exp-empty-state" style="color:#f38ba8;">Failed loading files: ${e.message}</div>`;
+        }
+
+        // Up Arrow Navigation Action
+        win.contentElement.querySelector("#exp-btn-up").onclick = () => {
+            if (currentDir === "/" || currentDir === "") return;
+            const segments = currentDir.split("/").filter(Boolean);
+            segments.pop();
+            currentDir = "/" + segments.join("/");
+            renderContents();
+        };
+    };
+
+    win.contentElement.refreshExplorerInstance = () => renderContents();
+    renderContents();
+}
 
         // Parse VFS Files
         try {
