@@ -26,7 +26,7 @@
 </head>
 <body>
     <div id="boot-screen">
-        <div class="boot-header">WEBKERNEL BOOTLOADER v1.0.0 (ES2023)</div>
+        <div class="boot-header">WEBKERNEL BOOTLOADER v1.1.0 (ES2023)</div>
         <div id="boot-logs"></div>
         <div id="boot-spinner" class="spinner"></div>
     </div>
@@ -67,6 +67,9 @@
 
                 appendLog("Starting Core System Services...");
                 kernel.bootSequence();
+
+                // Refresh explicitly after boot sequence seeding completes
+                gui.refreshDesktopIcons();
 
                 setTimeout(() => {
                     appendLog("System ready. Passing context handles to Desktop execution...", "log-success");

@@ -84,21 +84,13 @@ class VirtualFileSystem {
     }
 
     _initializeSystemArchitectureFolders() {
-        const structuralPaths = [
-            "/", "/home", "/desktop", "/documents", "/downloads", 
-            "/music", "/pictures", "/videos", "/apps", "/system", 
-            "/config", "/themes", "/cache", "/tmp", "/logs"
-        ];
-
+        // Build basic skeletal structure baseline
+        const structuralPaths = ["/desktop", "/apps"];
         structuralPaths.forEach(path => {
             if (!this.exists(path)) {
                 this.mkdir(path, "system");
             }
         });
-
-        if (!this.exists("/desktop/readme.txt")) {
-            this.writeFile("/desktop/readme.txt", "Welcome to WebKernel. This platform runs modular application nodes isolated behind an abstract execution layer.", "text/plain", "system");
-        }
     }
 
     exists(path) {
@@ -157,9 +149,7 @@ class VirtualFileSystem {
     }
 
     readDir(path) {
-        const absolutePath = path.endsWith("/") ? path : path + "/";
         const matches = [];
-        
         for (const [key, record] of this.root.entries()) {
             if (key === path) continue;
             if (key.startsWith(path)) {
@@ -222,7 +212,7 @@ class ProcessManager {
 
         try {
             const applicationModule = await import(allocationUrl);
-            if (!applicationModule.default) throw new Error("Application entry points must output a default execution schema class context instantiation wrapper.");
+            if (!applicationModule.default) throw new Error("Application entry points must output a default class execution schema.");
 
             const TargetClass = applicationModule.default;
             const pid = this.spawn(TargetClass.manifest || { name: path.split("/").pop() });
@@ -230,7 +220,19 @@ class ProcessManager {
             const runningInstance = new TargetClass();
             this.table.get(pid).instance = runningInstance;
             
+            // Track window allocations created during init loop
+            const trackingIntercept = this.kernel.gui.createWindow.bind(this.kernel.gui);
+            this.kernel.gui.createWindow = (options) => {
+                const contextRef = trackingIntercept(options);
+                const procNode = this.table.get(pid);
+                if (procNode) procNode.allocation.windows.push(contextRef.winId);
+                return contextRef;
+            };
+
             runningInstance.init(pid);
+            
+            // Restore clean implementation hook
+            this.kernel.gui.createWindow = trackingIntercept;
             
             URL.revokeObjectURL(allocationUrl);
             return pid;
@@ -254,7 +256,7 @@ class ProcessManager {
             try {
                 proc.instance.destroy();
             } catch (err) {
-                console.error(`Error destroying process process instances (PID: ${pid}):`, err);
+                console.error(`Error destroying process context (PID: ${pid}):`, err);
             }
         }
 
@@ -266,7 +268,7 @@ class ProcessManager {
 
 class SystemKernel {
     constructor(bootLogHook) {
-        this.version = "1.0.0-Release";
+        this.version = "1.1.0-Release";
         this.bootLog = bootLogHook || console.log;
         this.events = new EventBus();
         this.vfs = new VirtualFileSystem(this.bootLog);
@@ -295,37 +297,156 @@ class SystemKernel {
     }
 
     _seedSystemDefaultApplications() {
-        const demoAppSource = `
-            export default class SystemDemoApp {
-                static manifest = {
-                    name: "System Terminal Demo",
-                    version: "1.0.0",
-                    permissions: ["vfs.read", "window.create"]
-                };
-                init(pid) {
-                    this.pid = pid;
-                    const win = Kernel.createWindow({
-                        title: "System Automation Output",
-                        width: 400,
-                        height: 250,
-                        x: 120,
-                        y: 150
-                    });
-                    
-                    win.contentElement.innerHTML = \`
-                        <div style="padding:15px; font-family:monospace; color:#a6e3a1; background:#11111b; height:100%;">
-                            <p>> Initializing isolated node workflow...</p>
-                            <p style="margin-top:8px">> Running process tracking wrapper context.</p>
-                            <p style="margin-top:8px; color:#cdd6f4">> PID Verification: \${pid}</p>
-                        </div>
-                    \`;
-                }
-                destroy() {
-                    console.log("Demo runtime interface safely unmapped from process boundaries.");
-                }
+        // Create full filesystem layout framework defaults
+        const defaultStructuralDirs = [
+            "/apps", "/desktop", "/documents", "/downloads", 
+            "/system", "/system/bin", "/system/config", "/tmp"
+        ];
+        
+        defaultStructuralDirs.forEach(dir => {
+            if(!this.vfs.exists(dir)) this.vfs.mkdir(dir, "system");
+        });
+
+        // Master Terminal Source Module Definition
+        const terminalAppSource = `export default class SystemTerminal {
+    static manifest = {
+        name: "System Terminal",
+        version: "1.1.0",
+        permissions: ["vfs.read", "vfs.write", "window.create", "settings.set"]
+    };
+
+    init(pid) {
+        this.pid = pid;
+        this.currentDirectory = "/";
+        
+        const win = Kernel.createWindow({
+            title: "Terminal Shell Context",
+            width: 600,
+            height: 400,
+            x: 80,
+            y: 100
+        });
+
+        this.container = win.contentElement;
+        this.renderTerminalUI();
+    }
+
+    renderTerminalUI() {
+        this.container.innerHTML = \`
+            <div class="terminal-wrapper" style="background:#0f0f17; color:#a6e3a1; font-family:monospace; font-size:13px; height:100%; display:flex; flex-direction:column; padding:10px; box-sizing:border-box;">
+                <div class="terminal-output" style="flex:1; overflow-y:auto; white-space:pre-wrap; margin-bottom:10px; line-height:1.5;">WebKernel Core System Shell Layout Engine.\\nType 'help' for diagnostics.\\n\\n</div>
+                <div class="terminal-input-line" style="display:flex; align-items:center; gap:8px;">
+                    <span class="terminal-prompt" style="color:#89b4fa; font-weight:bold;">root@webkernel:\${this.currentDirectory}$</span>
+                    <input type="text" class="terminal-input-field" style="flex:1; background:transparent; border:none; color:#cdd6f4; font-family:monospace; font-size:13px; outline:none;" autofocus />
+                </div>
+            </div>
+        \`;
+
+        this.outputArea = this.container.querySelector(".terminal-output");
+        this.inputField = this.container.querySelector(".terminal-input-field");
+
+        this.inputField.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                const commandString = this.inputField.value.trim();
+                this.inputField.value = "";
+                if (commandString) this.executeCommand(commandString);
             }
-        `;
-        this.vfs.writeFile("/apps/terminal.js", demoAppSource, "application/javascript", "system");
+        });
+
+        this.container.querySelector(".terminal-wrapper").onclick = () => this.inputField.focus();
+    }
+
+    print(text, type = "default") {
+        const line = document.createElement("div");
+        if (type === "error") line.style.color = "#f38ba8";
+        if (type === "info") line.style.color = "#89b4fa";
+        if (type === "success") line.style.color = "#a6e3a1";
+        line.innerText = text;
+        this.outputArea.appendChild(line);
+        this.outputArea.scrollTop = this.outputArea.scrollHeight;
+    }
+
+    executeCommand(rawInput) {
+        this.print("root@webkernel:" + this.currentDirectory + "$ " + rawInput);
+        const args = rawInput.split(/\\s+/);
+        const command = args[0].toLowerCase();
+        const p1 = args[1];
+        const p2 = args.slice(2).join(" ");
+
+        switch (command) {
+            case "help":
+                this.print("Available commands:\\nls, mkdir [path], cat [path], write [path] [data], rm [path], get [key], set [key] [val], prepfs, clear, shutdown", "info");
+                break;
+            case "ls":
+                try {
+                    const files = Kernel.vfs.readDir(this.currentDirectory);
+                    if(!files.length) this.print("Empty.");
+                    else this.print(files.map(f => "[" + f.type.toUpperCase() + "] " + f.path.split("/").pop()).join("\\n"));
+                } catch(e) { this.print(e.message, "error"); }
+                break;
+            case "mkdir":
+                if(!p1) return this.print("Usage: mkdir [path]", "error");
+                try {
+                    const path = p1.startsWith("/") ? p1 : (this.currentDirectory + "/" + p1).replace(/\\/+/g, "/");
+                    Kernel.vfs.mkdir(path);
+                    this.print("Directory created.", "success");
+                } catch(e) { this.print(e.message, "error"); }
+                break;
+            case "cat":
+                if(!p1) return this.print("Usage: cat [path]", "error");
+                try {
+                    const path = p1.startsWith("/") ? p1 : (this.currentDirectory + "/" + p1).replace(/\\/+/g, "/");
+                    this.print(Kernel.vfs.readFile(path));
+                } catch(e) { this.print(e.message, "error"); }
+                break;
+            case "write":
+                if(!p1 || !p2) return this.print("Usage: write [path] [data]", "error");
+                try {
+                    const path = p1.startsWith("/") ? p1 : (this.currentDirectory + "/" + p1).replace(/\\/+/g, "/");
+                    Kernel.vfs.writeFile(path, p2, "text/plain");
+                    this.print("Write successful.", "success");
+                } catch(e) { this.print(e.message, "error"); }
+                break;
+            case "rm":
+                if(!p1) return this.print("Usage: rm [path]", "error");
+                try {
+                    const path = p1.startsWith("/") ? p1 : (this.currentDirectory + "/" + p1).replace(/\\/+/g, "/");
+                    Kernel.vfs.remove(path);
+                    this.print("Resource unmapped.", "success");
+                } catch(e) { this.print(e.message, "error"); }
+                break;
+            case "get":
+                if(!p1) return this.print("Usage: get [key]", "error");
+                this.print(p1 + " = " + Kernel.settings.get(p1), "info");
+                break;
+            case "set":
+                if(!p1 || !p2) return this.print("Usage: set [key] [val]", "error");
+                Kernel.settings.set(p1, p2);
+                this.print("Registry mapping updated.", "success");
+                break;
+            case "prepfs":
+                try {
+                    Kernel.vfs.readDir("/").forEach(n => Kernel.vfs.remove(n.path));
+                    ["/apps", "/desktop", "/documents", "/downloads", "/system", "/tmp"].forEach(d => Kernel.vfs.mkdir(d));
+                    this.print("Filesystem flashed completely to standard defaults.", "success");
+                } catch(e) { this.print(e.message, "error"); }
+                break;
+            case "clear": this.outputArea.innerHTML = ""; break;
+            case "shutdown": Kernel.power.shutdown(); break;
+            default: this.print("Unknown command descriptor.", "error");
+        }
+    }
+
+    destroy() {}
+}`;
+
+        // Commit file directly into desktop environment grid layer path and execution apps path
+        this.vfs.writeFile("/apps/terminal.js", terminalAppSource, "application/javascript", "system");
+        this.vfs.writeFile("/desktop/terminal.js", terminalAppSource, "application/javascript", "system");
+
+        if (!this.vfs.exists("/desktop/readme.txt")) {
+            this.vfs.writeFile("/desktop/readme.txt", "Welcome to WebKernel. System infrastructure fully initialized.", "text/plain", "system");
+        }
     }
 
     shutdown() {

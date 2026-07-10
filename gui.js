@@ -31,7 +31,7 @@ class WebGUI {
             .btn-max { background-color: #f9e2af; }
             .btn-min { background-color: #a6e3a1; }
             .window-body-content { flex: 1; overflow: auto; color: var(--theme-text); position: relative; }
-            .desktop-icon-node { display: flex; flex-direction: column; align-items: center; width: 90px; padding: 12px 6px; cursor: pointer; border-radius: 6px; text-align: center; gap: 8px; color: #ffffff; text-shadow: 1px 2px 4px rgba(0,0,0,0.8); font-size: 12px; }
+            .desktop-icon-node { display: flex; flex-direction: column; align-items: center; width: 95px; padding: 12px 6px; cursor: pointer; border-radius: 6px; text-align: center; gap: 8px; color: #ffffff; text-shadow: 1px 2px 4px rgba(0,0,0,0.8); font-size: 12px; }
             .desktop-icon-node:hover { background: rgba(255,255,255,0.15); }
             .start-dock-panel { position: absolute; bottom: 55px; left: 15px; width: 320px; height: 420px; background: var(--theme-bg); border: 1px solid var(--theme-border); border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); display: none; flex-direction: column; z-index: 999999; overflow: hidden; }
             .dock-app-row { display: flex; align-items: center; padding: 12px 20px; color: var(--theme-text); cursor: pointer; border-bottom: 1px solid var(--theme-border); font-size: 13px; }
@@ -67,8 +67,6 @@ class WebGUI {
 
         this.root.onclick = () => { menuOverlay.style.display = "none"; };
         menuOverlay.onclick = (e) => e.stopPropagation();
-
-        this.refreshDesktopIcons();
     }
 
     _wireGlobalUserInteractions() {
@@ -82,15 +80,18 @@ class WebGUI {
 
     refreshDesktopIcons() {
         const targetGrid = this.root.querySelector("#desktop-grid-matrix");
+        if (!targetGrid) return;
         targetGrid.innerHTML = "";
-        const staticVirtualDesktopFiles = this.kernel.vfs.readDir("/desktop");
         
+        const staticVirtualDesktopFiles = this.kernel.vfs.readDir("/desktop");
         staticVirtualDesktopFiles.forEach(fileRecord => {
             const iconNode = document.createElement("div");
             iconNode.className = "desktop-icon-node";
+            
+            const isJs = fileRecord.path.endsWith(".js");
             iconNode.innerHTML = `
-                <div style="font-size:2.2rem;">${fileRecord.type === "directory" ? "📁" : "📄"}</div>
-                <div style="text-overflow:ellipsis; overflow:hidden; white-space:nowrap; width:100%;">${fileRecord.path.split("/").pop()}</div>
+                <div style="font-size:2.2rem;">${isJs ? "⚙️" : (fileRecord.type === "directory" ? "📁" : "📄")}</div>
+                <div style="text-overflow:ellipsis; overflow:hidden; white-space:nowrap; width:100%; color:#ffffff;">${fileRecord.path.split("/").pop()}</div>
             `;
             iconNode.onclick = () => this._handleIconExecutionRoute(fileRecord);
             targetGrid.appendChild(iconNode);
@@ -99,7 +100,9 @@ class WebGUI {
 
     _populateLauncherApplications() {
         const itemsList = this.root.querySelector("#start-menu-payload-list");
+        if (!itemsList) return;
         itemsList.innerHTML = "";
+        
         const applicationExecutables = this.kernel.vfs.readDir("/apps");
         applicationExecutables.forEach(app => {
             const nameStr = app.path.split("/").pop();
@@ -202,6 +205,7 @@ class WebGUI {
 
     _syncTaskbarProcessTray() {
         const container = this.root.querySelector("#taskbar-active-process-tray");
+        if (!container) return;
         container.innerHTML = "";
         this.windows.forEach((frameNode, uniqueId) => {
             const visualLabel = frameNode.querySelector(".window-titlebar span").innerText;
