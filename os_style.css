@@ -384,3 +384,57 @@
     background: rgba(255, 255, 255, 0.08);
     color: #ffffff;
 }
+
+/* 📟 Virtual BIOS Frame Matrix Rules */
+#virtual-bios-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #000000;
+    color: #f8f8f2;
+    font-family: 'Courier New', Courier, monospace;
+    padding: 30px;
+    box-sizing: border-box;
+    z-index: 10000005;
+}
+
+.bios-header {
+    border-bottom: 2px dashed #ffffff;
+    padding-bottom: 10px;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.bios-body {
+    margin-top: 20px;
+    line-height: 1.8;
+    font-size: 13px;
+    height: 80%;
+    overflow-y: auto;
+}
+
+.bios-line {
+    white-space: pre-wrap;
+}
+
+.bios-footer {
+    position: absolute;
+    bottom: 30px;
+    left: 30px;
+    color: #555555;
+    font-size: 12px;
+}
+
+/* 🪟 Windows Sizing Grip Node Box Styles */
+.win-resize-grip {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 16px;
+    height: 16px;
+    cursor: se-resize;
+    background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.15) 40%);
+    z-index: 999;
+}

@@ -1,5 +1,5 @@
 /**
- * Win11Web Architecture OS Layer Clone (Context Menu Update)
+ * Win11Web Architecture OS Layer Clone (BIOS, Sizing & Drag/Drop Update)
  * Built cleanly on top of the WebKernel API ecosystem.
  */
 
@@ -10,12 +10,14 @@ document.addEventListener("DOMContentLoaded", () => {
     osStyles.href = "os_style.css";
     document.head.appendChild(osStyles);
 
-    // 2. Poll safely for Kernel API availability
+    // 2. Poll safely for Kernel API availability, then launch the BIOS first
     window.addEventListener("load", () => {
         const bootTimer = setInterval(() => {
             if (window.Kernel) {
                 clearInterval(bootTimer);
-                initializeWin11OS();
+                runVirtualBIOS(() => {
+                    initializeWin11OS();
+                });
             }
         }, 50);
     });
@@ -24,14 +26,66 @@ document.addEventListener("DOMContentLoaded", () => {
 // Global state variables
 let recycleBinStorage = [];
 let currentContextMenu = null;
+const windowHistoryState = new Map(); // Tracks maximized sizing backups
+
+/**
+ * 📟 VIRTUAL BIOS SUBSYSTEM
+ */
+function runVirtualBIOS(onComplete) {
+    const root = document.getElementById("desktop-root");
+    // Ensure root is visible for the BIOS output display
+    root.style.display = "block";
+    root.style.background = "#000000";
+    
+    root.innerHTML = `
+        <div id="virtual-bios-screen">
+            <div class="bios-header">
+                <span>AMERICAN MEGA-WEB TRENDS BIOS v2.16.1242</span>
+                <span style="float: right;">July 2026</span>
+            </div>
+            <div class="bios-body" id="bios-log-output"></div>
+            <div class="bios-footer">Press [DEL] to enter Setup Core // Boot Agent Active</div>
+        </div>
+    `;
+
+    const logOutput = document.getElementById("bios-log-output");
+    const logs = [
+        "Initializing System Core Architecture...",
+        "Checking RAM: 16384MB OK (Dual Channel DDR4)",
+        "Detecting VFS Storage Blocks...",
+        "Found Persistent Node: IndexedDB Virtual Disk 0 (VFS Master Partition)",
+        "Verifying Kernel API Facade integrity...",
+        "Status: Security Layer Active & Uncompromised.",
+        "Loading Master Boot Record (MBR) via /os_bootstrap.js...",
+        "Launching Win11Web Subsystem Shell Layer Environment..."
+    ];
+
+    let currentIdx = 0;
+    function printNextLog() {
+        if (currentIdx < logs.length) {
+            const line = document.createElement("div");
+            line.className = "bios-line";
+            line.innerText = `> ${logs[currentIdx]}`;
+            logOutput.appendChild(line);
+            currentIdx++;
+            setTimeout(printNextLog, Math.random() * 250 + 100);
+        } else {
+            setTimeout(() => {
+                root.innerHTML = ""; // Clear BIOS completely
+                onComplete();
+            }, 800);
+        }
+    }
+    setTimeout(printNextLog, 200);
+}
 
 function initializeWin11OS() {
     console.log(`%c Win11Web Deployment Initialization Complete `, "background: #0078d4; color: #ffffff; font-weight: bold;");
 
     // Apply standard modern dark background wallpaper via configuration registry
     Kernel.settings.set("sys.wallpaper", "linear-gradient(135deg, #060b19 0%, #0a1128 100%)");
-
     const root = document.getElementById("desktop-root");
+    root.style.background = Kernel.settings.get("sys.wallpaper");
 
     // 3. Render Windows Layout
     root.innerHTML = `
@@ -80,7 +134,11 @@ function initializeWin11OS() {
         </div>
     `;
 
-    // 4. Bind action controllers
+    // Intercept Window Spawning to inject custom Window Control Management Hooks (Sizing/Minimize/Maximize)
+    Kernel.events.on("window-opened", (data) => {
+        injectAdvancedWindowControls(data.winId);
+    });
+
     const startTrigger = document.getElementById("win-start-trigger");
     const startMenu = document.getElementById("win-start-menu");
 
@@ -89,24 +147,94 @@ function initializeWin11OS() {
         startMenu.classList.toggle("win-menu-hidden");
     };
 
-    // Global Click Dismissal Pipeline for Menus
     document.onclick = () => { 
         startMenu.classList.add("win-menu-hidden"); 
         closeContextMenu();
     };
     startMenu.onclick = (e) => e.stopPropagation();
 
-    // 5. Setup Context Menu Interceptors
     setupContextMenuListeners();
 
-    // 6. Update system tray real-time clock
     setInterval(() => {
         const time = new Date();
         document.getElementById("tray-clock").innerText = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }, 1000);
 
-    // Initial desktop surface item rendering refresh
     refreshWinDesktop();
+}
+
+/**
+ * 🪟 ADVANCED WINDOWS MANAGEMENT PIPELINE (Resize, Maximize, Minimize Handles)
+ */
+function injectAdvancedWindowControls(winId) {
+    // Find the window element created by the kernel core within the DOM
+    const winElement = document.querySelector(`[data-window-id="${winId}"]`);
+    if (!winElement) return;
+
+    const minBtn = winElement.querySelector(".btn-min");
+    const maxBtn = winElement.querySelector(".btn-max");
+    
+    // 1. MINIMIZE FUNCTIONALITY (Slide Window Out / Toggle Active Task State)
+    minBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (winElement.style.display !== "none") {
+            winElement.style.display = "none";
+        }
+    };
+
+    // 2. MAXIMIZE / RESTORE FUNCTIONALITY
+    maxBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (windowHistoryState.has(winId)) {
+            // Restore previous dimensions
+            const backup = windowHistoryState.get(winId);
+            Object.assign(winElement.style, backup);
+            windowHistoryState.delete(winId);
+        } else {
+            // Backup current configuration mapping state
+            windowHistoryState.set(winId, {
+                top: winElement.style.top,
+                left: winElement.style.left,
+                width: winElement.style.width,
+                height: winElement.style.height
+            });
+            // Apply absolute view constraints to simulate screen takeover boundaries
+            Object.assign(winElement.style, {
+                top: "0px",
+                left: "0px",
+                width: "100vw",
+                height: "calc(100vh - 48px)"
+            });
+        }
+    };
+
+    // 3. SEAMLESS MOUSE RE-SIZING GRIP MATRIX SEEDING
+    const resizeGrip = document.createElement("div");
+    resizeGrip.className = "win-resize-grip";
+    winElement.appendChild(resizeGrip);
+
+    resizeGrip.onmousedown = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const startWidth = parseFloat(getComputedStyle(winElement, null).getPropertyValue('width'));
+        const startHeight = parseFloat(getComputedStyle(winElement, null).getPropertyValue('height'));
+        const startX = e.clientX;
+        const startY = e.clientY;
+
+        function doResize(ev) {
+            winElement.style.width = `${startWidth + (ev.clientX - startX)}px`;
+            winElement.style.height = `${startHeight + (ev.clientY - startY)}px`;
+        }
+
+        function stopResize() {
+            document.removeEventListener('mousemove', doResize);
+            document.removeEventListener('mouseup', stopResize);
+        }
+
+        document.addEventListener('mousemove', doResize);
+        document.addEventListener('mouseup', stopResize);
+    };
 }
 
 /**
@@ -115,7 +243,6 @@ function initializeWin11OS() {
 function setupContextMenuListeners() {
     const root = document.getElementById("desktop-root");
 
-    // Intercept all right clicks inside the OS workspace container
     root.oncontextmenu = (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -123,7 +250,6 @@ function setupContextMenuListeners() {
 
         let menuOptions = [];
         
-        // Target Identification Tree Checking
         const targetShortcut = e.target.closest(".win-shortcut-tile");
         const targetTaskbarApp = e.target.closest(".taskbar-icon");
         const targetClockZone = e.target.closest("#win-tray-clock-zone");
@@ -147,24 +273,16 @@ function setupContextMenuListeners() {
         } else if (targetTaskbarApp) {
             const appType = targetTaskbarApp.dataset.appType;
             menuOptions = [
-                { label: `Launch Application (${appType})`, action: () => launchWinApp(appType === 'start' ? 'terminal' : appType) },
-                { label: "Pin to Taskbar", action: () => console.log("Pinned target module") },
-                { label: "Close all windows", action: () => alert("Closing windows allocated to app") }
+                { label: `Launch Application (${appType})`, action: () => launchWinApp(appType === 'start' ? 'terminal' : appType) }
             ];
         } else if (targetClockZone) {
             menuOptions = [
-                { label: "Adjust date/time settings", action: () => alert("Time Sync: Syncing with system architecture clock node.") },
-                { label: "Turn off notifications", action: () => alert("Do Not Disturb toggled.") },
-                { label: "Taskbar settings", action: () => alert("Opening personalization settings panel.") }
+                { label: "Adjust date/time settings", action: () => alert("Time Sync Complete.") }
             ];
         } else if (isDesktopSurface) {
             menuOptions = [
                 { label: "Create New Text Document", action: createNewDesktopFile },
-                { label: "Refresh Desktop Icons", action: refreshWinDesktop },
-                { label: "Change Wallpaper Theme", action: () => {
-                    Kernel.settings.set("sys.wallpaper", "linear-gradient(135deg, #1a1c2e 0%, #0f101b 100%)");
-                    document.getElementById("desktop-root").style.background = Kernel.settings.get("sys.wallpaper");
-                }}
+                { label: "Refresh Desktop Icons", action: refreshWinDesktop }
             ];
         }
 
@@ -203,9 +321,6 @@ function closeContextMenu() {
     }
 }
 
-/**
- * File Management Extensions
- */
 function createNewDesktopFile() {
     const filename = prompt("Enter new filename context destination (e.g., note.txt):");
     if (!filename) return;
@@ -225,12 +340,20 @@ function sendFileToRecycleBin(path) {
     } catch(e) { alert(e.message); }
 }
 
-/**
- * Custom App Launch Routing Table Options
- */
 function launchWinApp(type, pathArg = "") {
     document.getElementById("win-start-menu").classList.add("win-menu-hidden");
     closeContextMenu();
+
+    // If an application's window is minimized and hidden, restore its viewport on click
+    if (type !== 'start') {
+        const existingWin = Array.from(document.querySelectorAll('.kernel-window')).find(el => {
+            return el.querySelector('.window-titlebar span').innerText.toLowerCase().includes(type.toLowerCase());
+        });
+        if (existingWin && existingWin.style.display === "none") {
+            existingWin.style.display = "flex";
+            return;
+        }
+    }
 
     switch(type) {
         case 'terminal':
@@ -398,15 +521,11 @@ function renderRecycleBinWindow() {
     renderContents();
 }
 
-/**
- * Re-read and draw workspace layout icons to the screen layout surface map
- */
 function refreshWinDesktop() {
     const surface = document.getElementById("win-desktop-surface");
     if (!surface) return;
     surface.innerHTML = "";
 
-    // Always append the fixed Recycle Bin tile shortcut
     const recycleNode = document.createElement("div");
     recycleNode.className = "win-shortcut-tile";
     recycleNode.dataset.isRecycle = "true";
