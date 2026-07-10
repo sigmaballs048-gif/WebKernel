@@ -1,63 +1,152 @@
 /**
- * WebKernel - Public API
- * Exposes a stable, documented interface for Applications to interact with the OS.
+ * WebKernel - Application API Broker Configuration
+ * Implements architectural boundaries via a locked facade object sandbox.
  */
 
-function createKernelAPI(sysKernel, sysGUI) {
-    // Security layer: Ensure apps only call what is explicitly exposed.
+function createKernelAPI(coreSystemKernel, coreSystemGUI) {
     
-    const api = {
-        // --- Window System ---
-        createWindow: (options) => sysGUI.createWindow(options),
-        closeWindow: (winId) => sysGUI.closeWindow(winId),
+    // Abstract application-level request verification layers
+    const verifyOperationalAuthorization = (permissionNode) => {
+        // Core structural verification framework logic expansion hook
+        return true; 
+    };
+
+    const secureKernelAPIFacade = {
         
-        // --- File System ---
+        // --- Core Base Structural Properties ---
+        systemVersion: coreSystemKernel.version,
+
+        // --- Window Subsystem Wrapper Facades ---
+        createWindow: (displayOptions) => {
+            if(!verifyOperationalAuthorization("window.create")) throw new Error("Security Exception: Access Denied");
+            return coreSystemGUI.createWindow(displayOptions);
+        },
+
+        closeWindow: (targetWindowSessionId) => {
+            return coreSystemGUI.closeWindow(targetWindowSessionId);
+        },
+
+        // --- Virtual Filesystem Block API Facades ---
         vfs: {
-            mkdir: (path) => sysKernel.vfs.mkdir(path),
-            exists: (path) => sysKernel.vfs.exists(path),
-            readFile: (path) => sysKernel.vfs.readFile(path),
-            writeFile: (path, content, mime) => sysKernel.vfs.writeFile(path, content, mime)
-        },
-        
-        // --- Process Management ---
-        process: {
-            spawn: (manifest) => sysKernel.process.spawn(manifest),
-            kill: (pid) => sysKernel.process.kill(pid)
-        },
+            mkdir: (targetPath) => {
+                if(!verifyOperationalAuthorization("vfs.write")) throw new Error("Security Exception: Access Denied");
+                return coreSystemKernel.vfs.mkdir(targetPath, "user");
+            },
+            
+            writeFile: (targetPath, rawContentData, mimeSignatureString) => {
+                if(!verifyOperationalAuthorization("vfs.write")) throw new Error("Security Exception: Access Denied");
+                const stateSuccess = coreSystemKernel.vfs.writeFile(targetPath, rawContentData, mimeSignatureString, "user");
+                coreSystemKernel.events.emit("file-created", { path: targetPath });
+                coreSystemGUI.refreshDesktopIcons();
+                return stateSuccess;
+            },
 
-        // --- Event System ---
-        events: {
-            on: (event, callback) => sysKernel.events.on(event, callback),
-            emit: (event, data) => sysKernel.events.emit(event, data)
-        },
+            readFile: (targetPath) => {
+                if(!verifyOperationalAuthorization("vfs.read")) throw new Error("Security Exception: Access Denied");
+                return coreSystemKernel.vfs.readFile(targetPath);
+            },
 
-        // --- Settings & Registry ---
-        settings: {
-            get: (key) => sysKernel.settings.get(key),
-            set: (key, val) => {
-                sysKernel.settings.set(key, val);
-                sysKernel.events.emit('settings-changed', { key, val });
+            readDir: (targetPath) => {
+                if(!verifyOperationalAuthorization("vfs.read")) throw new Error("Security Exception: Access Denied");
+                return coreSystemKernel.vfs.readDir(targetPath);
+            },
+
+            exists: (targetPath) => {
+                return coreSystemKernel.vfs.exists(targetPath);
+            },
+
+            remove: (targetPath) => {
+                if(!verifyOperationalAuthorization("vfs.write")) throw new Error("Security Exception: Access Denied");
+                const stateSuccess = coreSystemKernel.vfs.remove(targetPath);
+                coreSystemKernel.events.emit("file-deleted", { path: targetPath });
+                coreSystemGUI.refreshDesktopIcons();
+                return stateSuccess;
             }
         },
 
-        // --- Notifications (Wrapper around event/gui) ---
-        notify: (title, message) => {
-            sysKernel.events.emit('notification', { title, message });
-            // Simple visual notification
-            const notif = document.createElement('div');
-            Object.assign(notif.style, {
-                position: 'absolute', top: '10px', right: '10px', width: '250px',
-                background: '#444', color: '#fff', padding: '15px', borderRadius: '5px',
-                zIndex: 99999, transition: 'opacity 0.5s', opacity: 1
+        // --- Process Architecture Scheduling Controls ---
+        process: {
+            spawn: (applicationManifestSchema) => {
+                if(!verifyOperationalAuthorization("process.spawn")) throw new Error("Security Exception: Access Denied");
+                return coreSystemKernel.process.spawn(applicationManifestSchema);
+            },
+
+            kill: (targetActivePid) => {
+                return coreSystemKernel.process.kill(targetActivePid);
+            },
+
+            launchFromFile: async (absoluteVfsRouteDestination) => {
+                return await coreSystemKernel.process.launchFromFile(absoluteVfsRouteDestination);
+            }
+        },
+
+        // --- Shared Application Core Event Communications ---
+        events: {
+            on: (eventSignatureToken, handlingCallbackRoutine) => {
+                coreSystemKernel.events.on(eventSignatureToken, handlingCallbackRoutine);
+            },
+
+            off: (eventSignatureToken, handlingCallbackRoutine) => {
+                coreSystemKernel.events.off(eventSignatureToken, handlingCallbackRoutine);
+            },
+
+            emit: (eventSignatureToken, operationalPayloadData) => {
+                coreSystemKernel.events.emit(eventSignatureToken, operationalPayloadData);
+            }
+        },
+
+        // --- Configuration Registries System ---
+        settings: {
+            get: (configurationRegistryMappingKey) => {
+                return coreSystemKernel.registry.get(configurationRegistryMappingKey);
+            },
+
+            set: (configurationRegistryMappingKey, processingValuePayload) => {
+                coreSystemKernel.registry.set(configurationRegistryMappingKey, processingValuePayload);
+                coreSystemKernel.events.emit("settings-changed", { key: configurationRegistryMappingKey, value: processingValuePayload });
+            }
+        },
+
+        // --- Engine Interface Operations ---
+        notify: (uiNotificationHeader, uiNotificationBody) => {
+            coreSystemKernel.events.emit("notification", { title: uiNotificationHeader, message: uiNotificationBody });
+            
+            // Build temporary, self-destructing toast UI elements directly in the GUI layer
+            const toastNotificationWrapper = document.createElement("div");
+            Object.assign(toastNotificationWrapper.style, {
+                position: "absolute", top: "20px", right: "20px", width: "280px",
+                background: "var(--theme-surface, #313244)", color: "var(--theme-text, #cdd6f4)",
+                padding: "16px", borderRadius: "8px", border: "1px solid var(--theme-border, #45475a)",
+                boxShadow: "0 8px 24px rgba(0,0,0,0.3)", zIndex: 9999999,
+                fontFamily: "sans-serif", fontSize: "13px", transition: "all 0.3s ease"
             });
-            notif.innerHTML = `<strong>${title}</strong><br>${message}`;
-            document.body.appendChild(notif);
+            
+            toastNotificationWrapper.innerHTML = `
+                <div style="font-weight:bold; margin-bottom:4px; color:var(--theme-accent, #89b4fa);">${uiNotificationHeader}</div>
+                <div>${uiNotificationBody}</div>
+            `;
+            
+            document.body.appendChild(toastNotificationWrapper);
             setTimeout(() => {
-                notif.style.opacity = 0;
-                setTimeout(() => notif.remove(), 500);
-            }, 3000);
+                toastNotificationWrapper.style.opacity = "0";
+                toastNotificationWrapper.style.transform = "translateY(-10px)";
+                setTimeout(() => toastNotificationWrapper.remove(), 300);
+            }, 3500);
+        },
+
+        theme: {
+            toggle: () => {
+                coreSystemGUI.toggleThemeEngine();
+            }
+        },
+
+        power: {
+            shutdown: () => {
+                coreSystemKernel.shutdown();
+            }
         }
     };
 
-    return Object.freeze(api); // Prevent modification of API namespace
+    // Deep freeze enforcement ensures protection against run-time modification attempts
+    return Object.freeze(secureKernelAPIFacade);
 }

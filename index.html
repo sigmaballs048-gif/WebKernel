@@ -3,20 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WebKernel Bootloader</title>
+    <title>WebKernel OS Platform</title>
     <style>
-        /* Base reset and boot screen styling */
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { overflow: hidden; background-color: #000; color: #fff; font-family: monospace; }
-        #boot-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; z-index: 9999; position: absolute; width: 100%; }
-        #desktop-root { display: none; width: 100vw; height: 100vh; position: relative; background: #222; }
-        .log-entry { width: 80%; max-width: 600px; text-align: left; color: #0f0; margin-bottom: 4px; }
+        :root {
+            --bg-color: #0b0b10;
+            --text-color: #a6adc8;
+            --accent-color: #89b4fa;
+            --panic-color: #f38ba8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body, html {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            font-family: 'Courier New', Courier, monospace;
+            color: var(--text-color);
+        }
+
+        #boot-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000000;
+            z-index: 999999;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        .boot-header {
+            color: var(--accent-color);
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            font-weight: bold;
+            border-bottom: 2px solid #1e1e2e;
+            padding-bottom: 10px;
+        }
+
+        .log-line {
+            line-height: 1.6;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+        }
+
+        .log-success { color: #a6e3a1; }
+        .log-warn { color: #f9e2af; }
+        .log-error { color: var(--panic-color); font-weight: bold; }
+
+        #desktop-root {
+            display: none;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            background-size: cover;
+            background-position: center;
+        }
+
+        /* Spinner for boot visual */
+        .spinner {
+            margin-top: 20px;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-left-color: var(--accent-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
+
     <div id="boot-screen">
-        <h2>WebKernel Init...</h2>
+        <div class="boot-header">WEBKERNEL BOOTLOADER v1.0.0 (ES2023)</div>
         <div id="boot-logs"></div>
+        <div id="boot-spinner" class="spinner"></div>
     </div>
 
     <div id="desktop-root"></div>
@@ -24,39 +101,53 @@
     <script src="kernel.js"></script>
     <script src="gui.js"></script>
     <script src="api.js"></script>
+
     <script>
-        // Bootloader Execution
         document.addEventListener("DOMContentLoaded", async () => {
-            const logger = (msg) => {
-                const logDiv = document.createElement('div');
-                logDiv.className = 'log-entry';
-                logDiv.innerText = `[ ${(Date.now() / 1000).toFixed(3)} ] ${msg}`;
-                document.getElementById('boot-logs').appendChild(logDiv);
+            const logContainer = document.getElementById("boot-logs");
+            const bootScreen = document.getElementById("boot-screen");
+            const desktopRoot = document.getElementById("desktop-root");
+
+            const appendLog = (text, type = "") => {
+                const line = document.createElement("div");
+                line.className = `log-line ${type}`;
+                line.innerText = `[ ${(performance.now() / 1000).toFixed(4)} ] ${text}`;
+                logContainer.appendChild(line);
+                bootScreen.scrollTop = bootScreen.scrollHeight;
             };
 
             try {
-                logger("Loading Kernel memory space...");
-                const kernel = new SystemKernel();
-                
-                logger("Mounting Virtual Filesystem...");
+                appendLog("Initializing Core WebKernel Runtime...", "log-success");
+                const kernel = new SystemKernel(appendLog);
+
+                appendLog("Mounting Persistent Virtual Filesystem Storage Blocks...");
                 await kernel.vfs.mount();
+                appendLog("VFS mounted successfully.", "log-success");
 
-                logger("Initializing GUI Window Manager...");
-                const gui = new WebGUI(kernel, document.getElementById('desktop-root'));
+                appendLog("Initializing Graphical User Interface Environment Framework...");
+                const gui = new WebGUI(kernel, desktopRoot);
+                kernel.setGUIReference(gui);
+                appendLog("GUI Stage components loaded.", "log-success");
 
-                logger("Exposing Public API APIs...");
+                appendLog("Instantiating Immutable Public Application Interface Proxies...");
                 window.Kernel = createKernelAPI(kernel, gui);
+                appendLog("Public Kernel API bound globally.", "log-success");
 
-                logger("Boot sequence complete. Switching to Desktop mode.");
+                appendLog("Starting Core System Services...");
+                kernel.bootSequence();
+
+                // Mocking visual handoff delay for initialization transitions
                 setTimeout(() => {
-                    document.getElementById('boot-screen').style.display = 'none';
-                    document.getElementById('desktop-root').style.display = 'block';
-                    window.Kernel.events.emit('system-ready', { time: Date.now() });
-                }, 1000);
+                    appendLog("System ready. Passing context handles to Desktop execution...", "log-success");
+                    bootScreen.style.display = "none";
+                    desktopRoot.style.display = "block";
+                    kernel.events.emit("system-ready", { timestamp: Date.now() });
+                }, 1200);
 
-            } catch (err) {
-                logger(`KERNEL PANIC: ${err.message}`);
-                console.error(err);
+            } catch (panicError) {
+                appendLog(`!!! KERNEL PANIC: INITIALIZATION CRASH !!!`, "log-error");
+                appendLog(`${panicError.stack || panicError}`, "log-error");
+                document.getElementById("boot-spinner").style.display = "none";
             }
         });
     </script>
