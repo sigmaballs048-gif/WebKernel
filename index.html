@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WebKernel Bootloader</title>
+    <style>
+        /* Base reset and boot screen styling */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { overflow: hidden; background-color: #000; color: #fff; font-family: monospace; }
+        #boot-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; z-index: 9999; position: absolute; width: 100%; }
+        #desktop-root { display: none; width: 100vw; height: 100vh; position: relative; background: #222; }
+        .log-entry { width: 80%; max-width: 600px; text-align: left; color: #0f0; margin-bottom: 4px; }
+    </style>
+</head>
+<body>
+    <div id="boot-screen">
+        <h2>WebKernel Init...</h2>
+        <div id="boot-logs"></div>
+    </div>
+
+    <div id="desktop-root"></div>
+
+    <script src="kernel.js"></script>
+    <script src="gui.js"></script>
+    <script src="api.js"></script>
+    <script>
+        // Bootloader Execution
+        document.addEventListener("DOMContentLoaded", async () => {
+            const logger = (msg) => {
+                const logDiv = document.createElement('div');
+                logDiv.className = 'log-entry';
+                logDiv.innerText = `[ ${(Date.now() / 1000).toFixed(3)} ] ${msg}`;
+                document.getElementById('boot-logs').appendChild(logDiv);
+            };
+
+            try {
+                logger("Loading Kernel memory space...");
+                const kernel = new SystemKernel();
+                
+                logger("Mounting Virtual Filesystem...");
+                await kernel.vfs.mount();
+
+                logger("Initializing GUI Window Manager...");
+                const gui = new WebGUI(kernel, document.getElementById('desktop-root'));
+
+                logger("Exposing Public API APIs...");
+                window.Kernel = createKernelAPI(kernel, gui);
+
+                logger("Boot sequence complete. Switching to Desktop mode.");
+                setTimeout(() => {
+                    document.getElementById('boot-screen').style.display = 'none';
+                    document.getElementById('desktop-root').style.display = 'block';
+                    window.Kernel.events.emit('system-ready', { time: Date.now() });
+                }, 1000);
+
+            } catch (err) {
+                logger(`KERNEL PANIC: ${err.message}`);
+                console.error(err);
+            }
+        });
+    </script>
+</body>
+</html>
