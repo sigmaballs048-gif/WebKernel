@@ -1,3 +1,356 @@
+/* Win11Web Integrated System Skin Stylesheet */
+
+#desktop-root {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background-size: cover;
+    background-position: center;
+}
+
+/* Wallpaper Layer Placement area */
+#win-desktop-surface {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 48px;
+    padding: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 85px);
+    grid-auto-rows: 90px;
+    gap: 20px;
+    align-content: start;
+    z-index: 5;
+}
+
+/* Shortcut Blocks */
+.win-shortcut-tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.15s;
+}
+
+.win-shortcut-tile:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.win-shortcut-tile .icon-pane {
+    font-size: 2.3rem;
+}
+
+.win-shortcut-tile .label-pane {
+    color: #ffffff;
+    font-size: 11px;
+    margin-top: 4px;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.delete-icon-overlay {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: #e04a4a;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    font-size: 11px;
+    line-height: 14px;
+    text-align: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.win-shortcut-tile:hover .delete-icon-overlay {
+    opacity: 1;
+}
+
+/* Windows 11 Centered Bottom Panel Taskbar Configuration */
+#win-taskbar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 48px;
+    background: rgba(32, 32, 32, 0.75);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0 15px;
+    z-index: 999995;
+}
+
+.taskbar-center-container {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.taskbar-icon {
+    background: transparent;
+    border: none;
+    font-size: 1.6rem;
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.taskbar-icon:hover {
+    background: rgba(255,255,255,0.1);
+    transform: scale(1.05);
+}
+
+.taskbar-system-tray {
+    position: absolute;
+    right: 15px;
+    color: #ffffff;
+    font-size: 12px;
+}
+
+/* Windows Start Menu Component Frame Layout */
+#win-start-menu {
+    position: absolute;
+    bottom: 56px;
+    left: 50%;
+    transform: translateX(-50%) scale(1);
+    width: 520px;
+    height: 600px;
+    background: rgba(32, 32, 32, 0.92);
+    backdrop-filter: blur(25px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    z-index: 999999;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    transition: opacity 0.2s, transform 0.2s cubic-bezier(0.1, 0.9, 0.2, 1);
+    transform-origin: bottom center;
+}
+
+#win-start-menu.win-menu-hidden {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.95);
+    pointer-events: none;
+}
+
+.start-search-box input {
+    width: 100%;
+    padding: 8px 14px;
+    background: rgba(0,0,0,0.2);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 6px;
+    color: white;
+    outline: none;
+}
+
+.start-section-title {
+    color: white;
+    font-size: 13px;
+    font-weight: bold;
+    margin: 25px 0 15px 0;
+}
+
+.start-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    flex: 1;
+}
+
+.start-app-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.start-app-item:hover {
+    background: rgba(255,255,255,0.08);
+}
+
+.start-app-item .app-icon {
+    font-size: 2rem;
+    margin-bottom: 6px;
+}
+
+.start-app-item .app-label {
+    color: #e0e0e0;
+    font-size: 12px;
+}
+
+.start-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding-top: 15px;
+    color: white;
+    font-size: 13px;
+}
+
+.power-btn {
+    background: transparent;
+    border: none;
+    color: #f38ba8;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+/* 🟦 VS Code Integrated Layout UI Rules */
+.code-editor-layout {
+    display: flex;
+    height: 100%;
+    background: #1e1e1e;
+    color: #cccccc;
+    font-family: Consolas, 'Courier New', monospace;
+    position: relative;
+}
+
+.editor-sidebar {
+    width: 180px;
+    background: #252526;
+    border-right: 1px solid #3c3c3c;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-title {
+    padding: 10px;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    color: #8c8c8c;
+}
+
+.file-tree-container {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.tree-file-row {
+    padding: 6px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tree-file-row:hover {
+    background: #2a2d2e;
+}
+
+.editor-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.editor-tabs-bar {
+    height: 35px;
+    background: #2d2d2d;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #3c3c3c;
+}
+
+.active-tab-item {
+    background: #1e1e1e;
+    padding: 0 20px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    border-right: 1px solid #252526;
+    color: #ffffff;
+}
+
+.editor-input-view {
+    flex: 1;
+    display: flex;
+    background: #1e1e1e;
+    overflow: hidden;
+}
+
+.editor-gutter {
+    width: 40px;
+    background: #1e1e1e;
+    color: #858585;
+    text-align: right;
+    padding: 12px 8px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+    user-select: none;
+    border-right: 1px solid #2d2d2d;
+}
+
+.editor-textarea {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #d4d4d4;
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 12px;
+    resize: none;
+}
+
+.editor-statusbar {
+    height: 22px;
+    background: #007acc;
+    color: #ffffff;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 15px;
+    padding: 0 10px;
+    font-size: 11px;
+}
+
+.vscode-save-floating {
+    position: absolute;
+    bottom: 35px;
+    right: 20px;
+    background: #0e639c;
+    color: white;
+    border: none;
+    padding: 6px 16px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+}
+
+.vscode-save-floating:hover {
+    background: #1177bb;
+}
+
 /* Windows Fluent UI Custom Dropdown Architecture */
 .win-context-menu {
     position: fixed;
