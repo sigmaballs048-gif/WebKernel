@@ -1,0 +1,156 @@
+/* CustomOS Layout Ecosystem Variations */
+
+#desktop-root {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow: hidden;
+}
+
+/* System Top Panel Strip Styling */
+#cos-top-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    background: #11111b;
+    border-bottom: 1px solid #313244;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 15px;
+    z-index: 999995;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.bar-left, .bar-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+#cos-launcher-btn {
+    background: #cba6f7;
+    color: #11111b;
+    border: none;
+    font-weight: bold;
+    padding: 5px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: transform 0.1s, background 0.2s;
+}
+
+#cos-launcher-btn:hover {
+    background: #b4befe;
+    transform: translateY(-1px);
+}
+
+.cos-system-node-tag {
+    color: #6c7086;
+    font-size: 11px;
+    font-family: monospace;
+}
+
+#cos-clock {
+    color: #cdd6f4;
+    font-family: monospace;
+    font-size: 13px;
+}
+
+/* Slidable Modular Application Launcher Styles */
+#cos-app-drawer {
+    position: absolute;
+    top: 48px;
+    left: 15px;
+    width: 280px;
+    background: #1e1e2e;
+    border: 1px solid #313244;
+    border-radius: 10px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+    z-index: 999999;
+    overflow: hidden;
+    transition: opacity 0.2s cubic-bezier(0.1, 0.9, 0.2, 1), transform 0.2s;
+    transform-origin: top left;
+}
+
+#cos-app-drawer.hidden-drawer {
+    opacity: 0;
+    transform: scale(0.95);
+    pointer-events: none;
+}
+
+.drawer-header {
+    padding: 12px 16px;
+    background: #252538;
+    color: #cba6f7;
+    font-weight: bold;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #313244;
+}
+
+.drawer-items {
+    display: flex;
+    flex-direction: column;
+}
+
+.drawer-item {
+    padding: 12px 16px;
+    color: #cdd6f4;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.drawer-item:hover {
+    background: #313244;
+    color: #a6e3a1;
+}
+
+/* User Desktop Surface Shortcut Alignment */
+#cos-desktop-surface {
+    position: absolute;
+    top: 40px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 90px);
+    grid-auto-rows: 95px;
+    gap: 15px;
+    z-index: 5;
+    align-content: start;
+}
+
+.cos-shortcut {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.2s;
+}
+
+.cos-shortcut:hover {
+    background: rgba(203, 166, 247, 0.15);
+}
+
+.cos-shortcut .icon {
+    font-size: 2.2rem;
+    margin-bottom: 4px;
+}
+
+.cos-shortcut .label {
+    color: #ffffff;
+    font-size: 11px;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.9);
+    width: 100%;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
