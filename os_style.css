@@ -438,3 +438,170 @@
     background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.15) 40%);
     z-index: 999;
 }
+
+/* 📁 Windows 11 File Explorer Layout Styles */
+.exp-window-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #1e1e1e;
+    color: #e2e2e2;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    overflow: hidden;
+}
+
+.exp-toolbar {
+    height: 42px;
+    background: #252526;
+    border-bottom: 1px solid #3c3c3c;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    gap: 12px;
+}
+
+.exp-nav-btn {
+    background: #3c3c3c;
+    border: none;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.exp-nav-btn:hover {
+    background: #4e4e4e;
+}
+
+.exp-path-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    background: #1e1e1e;
+    border: 1px solid #3c3c3c;
+    border-radius: 4px;
+    padding: 2px 8px;
+}
+
+.exp-path-icon {
+    margin-right: 6px;
+    font-size: 14px;
+}
+
+.exp-path-field {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #a6e3a1;
+    font-family: monospace;
+    font-size: 12px;
+    width: 100%;
+}
+
+.exp-workspace-layout {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+/* Explorer Sidebar UI */
+.exp-sidebar {
+    width: 160px;
+    background: #252526;
+    border-right: 1px solid #3c3c3c;
+    padding: 10px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.exp-side-group {
+    font-size: 11px;
+    font-weight: bold;
+    color: #7a7a7a;
+    padding: 4px 8px;
+    text-transform: uppercase;
+}
+
+.exp-side-item {
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.1s;
+}
+
+.exp-side-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.exp-side-item.active {
+    background: rgba(0, 120, 212, 0.2);
+    color: #60cdff;
+    font-weight: bold;
+}
+
+/* Explorer Main Pane Viewport */
+.exp-main-pane {
+    flex: 1;
+    padding: 15px;
+    background: #1e1e1e;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 90px);
+    grid-auto-rows: 95px;
+    gap: 12px;
+    overflow-y: auto;
+    align-content: start;
+}
+
+.exp-file-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.15s;
+    border: 1px solid transparent;
+}
+
+.exp-file-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.file-card-icon {
+    font-size: 2.2rem;
+}
+
+.file-card-label {
+    font-size: 11px;
+    margin-top: 6px;
+    color: #e2e2e2;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.exp-empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: #7a7a7a;
+    font-size: 13px;
+    padding-top: 40px;
+}
+
+.exp-statusbar {
+    height: 22px;
+    background: #252526;
+    border-top: 1px solid #3c3c3c;
+    font-size: 11px;
+    color: #7a7a7a;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+}

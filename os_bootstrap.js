@@ -1,16 +1,14 @@
 /**
- * Win11Web Architecture OS Layer Clone (BIOS, Sizing & Drag/Drop Update)
+ * Win11Web Architecture OS Layer Clone (File Explorer & VS Code Integration)
  * Built cleanly on top of the WebKernel API ecosystem.
  */
 
 document.addEventListener("DOMContentLoaded", () => {
-    // 1. Inject Windows stylesheet rules
     const osStyles = document.createElement("link");
     osStyles.rel = "stylesheet";
     osStyles.href = "os_style.css";
     document.head.appendChild(osStyles);
 
-    // 2. Poll safely for Kernel API availability, then launch the BIOS first
     window.addEventListener("load", () => {
         const bootTimer = setInterval(() => {
             if (window.Kernel) {
@@ -26,14 +24,13 @@ document.addEventListener("DOMContentLoaded", () => {
 // Global state variables
 let recycleBinStorage = [];
 let currentContextMenu = null;
-const windowHistoryState = new Map(); // Tracks maximized sizing backups
+const windowHistoryState = new Map();
 
 /**
  * 📟 VIRTUAL BIOS SUBSYSTEM
  */
 function runVirtualBIOS(onComplete) {
     const root = document.getElementById("desktop-root");
-    // Ensure root is visible for the BIOS output display
     root.style.display = "block";
     root.style.background = "#000000";
     
@@ -55,7 +52,6 @@ function runVirtualBIOS(onComplete) {
         "Detecting VFS Storage Blocks...",
         "Found Persistent Node: IndexedDB Virtual Disk 0 (VFS Master Partition)",
         "Verifying Kernel API Facade integrity...",
-        "Status: Security Layer Active & Uncompromised.",
         "Loading Master Boot Record (MBR) via /os_bootstrap.js...",
         "Launching Win11Web Subsystem Shell Layer Environment..."
     ];
@@ -68,26 +64,22 @@ function runVirtualBIOS(onComplete) {
             line.innerText = `> ${logs[currentIdx]}`;
             logOutput.appendChild(line);
             currentIdx++;
-            setTimeout(printNextLog, Math.random() * 250 + 100);
+            setTimeout(printNextLog, Math.random() * 150 + 50);
         } else {
             setTimeout(() => {
-                root.innerHTML = ""; // Clear BIOS completely
+                root.innerHTML = "";
                 onComplete();
-            }, 800);
+            }, 500);
         }
     }
     setTimeout(printNextLog, 200);
 }
 
 function initializeWin11OS() {
-    console.log(`%c Win11Web Deployment Initialization Complete `, "background: #0078d4; color: #ffffff; font-weight: bold;");
-
-    // Apply standard modern dark background wallpaper via configuration registry
     Kernel.settings.set("sys.wallpaper", "linear-gradient(135deg, #060b19 0%, #0a1128 100%)");
     const root = document.getElementById("desktop-root");
     root.style.background = Kernel.settings.get("sys.wallpaper");
 
-    // 3. Render Windows Layout
     root.innerHTML = `
         <div id="win-desktop-surface"></div>
 
@@ -134,7 +126,6 @@ function initializeWin11OS() {
         </div>
     `;
 
-    // Intercept Window Spawning to inject custom Window Control Management Hooks (Sizing/Minimize/Maximize)
     Kernel.events.on("window-opened", (data) => {
         injectAdvancedWindowControls(data.winId);
     });
@@ -164,51 +155,46 @@ function initializeWin11OS() {
 }
 
 /**
- * 🪟 ADVANCED WINDOWS MANAGEMENT PIPELINE (Resize, Maximize, Minimize Handles)
+ * 🪟 WINDOW MANAGEMENT INTERFACES (Resize, Maximize, Minimize Controls)
  */
 function injectAdvancedWindowControls(winId) {
-    // Find the window element created by the kernel core within the DOM
     const winElement = document.querySelector(`[data-window-id="${winId}"]`);
     if (!winElement) return;
 
     const minBtn = winElement.querySelector(".btn-min");
     const maxBtn = winElement.querySelector(".btn-max");
     
-    // 1. MINIMIZE FUNCTIONALITY (Slide Window Out / Toggle Active Task State)
-    minBtn.onclick = (e) => {
-        e.stopPropagation();
-        if (winElement.style.display !== "none") {
+    if (minBtn) {
+        minBtn.onclick = (e) => {
+            e.stopPropagation();
             winElement.style.display = "none";
-        }
-    };
+        };
+    }
 
-    // 2. MAXIMIZE / RESTORE FUNCTIONALITY
-    maxBtn.onclick = (e) => {
-        e.stopPropagation();
-        if (windowHistoryState.has(winId)) {
-            // Restore previous dimensions
-            const backup = windowHistoryState.get(winId);
-            Object.assign(winElement.style, backup);
-            windowHistoryState.delete(winId);
-        } else {
-            // Backup current configuration mapping state
-            windowHistoryState.set(winId, {
-                top: winElement.style.top,
-                left: winElement.style.left,
-                width: winElement.style.width,
-                height: winElement.style.height
-            });
-            // Apply absolute view constraints to simulate screen takeover boundaries
-            Object.assign(winElement.style, {
-                top: "0px",
-                left: "0px",
-                width: "100vw",
-                height: "calc(100vh - 48px)"
-            });
-        }
-    };
+    if (maxBtn) {
+        maxBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (windowHistoryState.has(winId)) {
+                const backup = windowHistoryState.get(winId);
+                Object.assign(winElement.style, backup);
+                windowHistoryState.delete(winId);
+            } else {
+                windowHistoryState.set(winId, {
+                    top: winElement.style.top,
+                    left: winElement.style.left,
+                    width: winElement.style.width,
+                    height: winElement.style.height
+                });
+                Object.assign(winElement.style, {
+                    top: "0px",
+                    left: "0px",
+                    width: "100vw",
+                    height: "calc(100vh - 48px)"
+                });
+            }
+        };
+    }
 
-    // 3. SEAMLESS MOUSE RE-SIZING GRIP MATRIX SEEDING
     const resizeGrip = document.createElement("div");
     resizeGrip.className = "win-resize-grip";
     winElement.appendChild(resizeGrip);
@@ -238,7 +224,99 @@ function injectAdvancedWindowControls(winId) {
 }
 
 /**
- * 🛠️ Context Menu Core Subsystem Engine
+ * 📁 ADVANCED INTEGRATION: Windows 11 File Explorer Application
+ */
+function renderWinExplorerWindow(initialDir = "/desktop") {
+    const win = Kernel.createWindow({
+        title: "File Explorer",
+        width: 680,
+        height: 440,
+        x: 110,
+        y: 60
+    });
+
+    let currentDir = initialDir;
+
+    const renderContents = () => {
+        win.contentElement.innerHTML = `
+            <div class="exp-window-container">
+                <div class="exp-toolbar">
+                    <button class="exp-nav-btn" id="exp-btn-up">⬆️ Up</button>
+                    <div class="exp-path-wrapper">
+                        <span class="exp-path-icon">📁</span>
+                        <input type="text" class="exp-path-field" value="${currentDir}" readonly />
+                    </div>
+                </div>
+                <div class="exp-workspace-layout">
+                    <div class="exp-sidebar">
+                        <div class="exp-side-group">Favorites</div>
+                        <div class="exp-side-item" data-target-path="/desktop">🖥️ Desktop</div>
+                        <div class="exp-side-item" data-target-path="/documents">📁 Documents</div>
+                        <div class="exp-side-item" data-target-path="/apps">⚙️ Applications</div>
+                    </div>
+                    <div class="exp-main-pane" id="exp-grid-view" data-current-dir="${currentDir}"></div>
+                </div>
+                <div class="exp-statusbar">Object references counted. Connected to VS Code layer mapping.</div>
+            </div>
+        `;
+
+        const gridView = win.contentElement.querySelector("#exp-grid-view");
+
+        // Bind Sidebar Links Dynamically
+        win.contentElement.querySelectorAll(".exp-side-item").forEach(item => {
+            if (item.dataset.targetPath === currentDir) item.classList.add("active");
+            item.onclick = () => {
+                currentDir = item.dataset.targetPath;
+                renderContents();
+            };
+        });
+
+        // Parse VFS Files
+        try {
+            const nodes = Kernel.vfs.readDir(currentDir);
+            if (nodes.length === 0) {
+                gridView.innerHTML = `<div class="exp-empty-state">This folder is completely empty.</div>`;
+            }
+
+            nodes.forEach(node => {
+                const itemEl = document.createElement("div");
+                itemEl.className = "exp-file-card";
+                itemEl.dataset.filePath = node.path;
+                const isJs = node.path.endsWith(".js");
+
+                itemEl.innerHTML = `
+                    <div class="file-card-icon">${isJs ? "🟦" : "📄"}</div>
+                    <div class="file-card-label">${node.path.split("/").pop()}</div>
+                `;
+
+                // DOUBLE CLICK -> Launch right inside our VS Code app!
+                itemEl.ondblclick = () => {
+                    launchWinApp('vscode', node.path);
+                };
+
+                gridView.appendChild(itemEl);
+            });
+        } catch(e) {
+            gridView.innerHTML = `<div class="exp-empty-state" style="color:#f38ba8;">Failed loading files: ${e.message}</div>`;
+        }
+
+        // Up Arrow Navigation Action
+        win.contentElement.querySelector("#exp-btn-up").onclick = () => {
+            if (currentDir === "/" || currentDir === "") return;
+            const segments = currentDir.split("/").filter(Boolean);
+            segments.pop();
+            currentDir = "/" + segments.join("/");
+            renderContents();
+        };
+    };
+
+    // Expose local component reload to global viewport managers
+    win.contentElement.refreshExplorerInstance = () => renderContents();
+    renderContents();
+}
+
+/**
+ * 🛠️ CONTEXT MENU CONTROLLERS & INTERCEPTORS
  */
 function setupContextMenuListeners() {
     const root = document.getElementById("desktop-root");
@@ -253,9 +331,42 @@ function setupContextMenuListeners() {
         const targetShortcut = e.target.closest(".win-shortcut-tile");
         const targetTaskbarApp = e.target.closest(".taskbar-icon");
         const targetClockZone = e.target.closest("#win-tray-clock-zone");
+        const targetExpFile = e.target.closest(".exp-file-card");
+        const targetExpPane = e.target.closest(".exp-main-pane");
         const isDesktopSurface = e.target.id === "win-desktop-surface";
 
-        if (targetShortcut) {
+        // 1. Right Clicked a File inside File Explorer!
+        if (targetExpFile) {
+            const filePath = targetExpFile.dataset.filePath;
+            menuOptions = [
+                { label: "🚀 Open in VS Code", action: () => launchWinApp('vscode', filePath) },
+                { label: "🗑️ Delete File", action: () => {
+                    sendFileToRecycleBin(filePath);
+                    const expWin = targetExpFile.closest('.exp-window-container').parentNode;
+                    if (expWin.refreshExplorerInstance) expWin.refreshExplorerInstance();
+                }}
+            ];
+        } 
+        // 2. Right Clicked Blank Empty Space inside File Explorer!
+        else if (targetExpPane) {
+            const activeDir = targetExpPane.dataset.currentDir;
+            menuOptions = [
+                { label: "➕ Create New Script File", action: () => {
+                    const filename = prompt("Enter text file destination name (e.g., app.js):");
+                    if (!filename) return;
+                    Kernel.vfs.writeFile(`${activeDir}/${filename}`, "// Code file context container\n", "text/plain");
+                    const expWin = targetExpPane.closest('.exp-window-container').parentNode;
+                    if (expWin.refreshExplorerInstance) expWin.refreshExplorerInstance();
+                    refreshWinDesktop();
+                }},
+                { label: "🔄 Refresh Folder View", action: () => {
+                    const expWin = targetExpPane.closest('.exp-window-container').parentNode;
+                    if (expWin.refreshExplorerInstance) expWin.refreshExplorerInstance();
+                }}
+            ];
+        }
+        // 3. Right Clicked standard Desktop Icons
+        else if (targetShortcut) {
             const isRecycle = targetShortcut.dataset.isRecycle === "true";
             const filePath = targetShortcut.dataset.filePath;
 
@@ -266,22 +377,18 @@ function setupContextMenuListeners() {
                 ];
             } else {
                 menuOptions = [
-                    { label: "Edit in VS Code", action: () => launchWinApp('vscode', filePath) },
-                    { label: "Delete File", action: () => sendFileToRecycleBin(filePath) }
+                    { label: "🚀 Open in VS Code", action: () => launchWinApp('vscode', filePath) },
+                    { label: "🗑️ Move to Recycle Bin", action: () => sendFileToRecycleBin(filePath) }
                 ];
             }
         } else if (targetTaskbarApp) {
             const appType = targetTaskbarApp.dataset.appType;
-            menuOptions = [
-                { label: `Launch Application (${appType})`, action: () => launchWinApp(appType === 'start' ? 'terminal' : appType) }
-            ];
+            menuOptions = [{ label: `Launch ${appType}`, action: () => launchWinApp(appType === 'start' ? 'terminal' : appType) }];
         } else if (targetClockZone) {
-            menuOptions = [
-                { label: "Adjust date/time settings", action: () => alert("Time Sync Complete.") }
-            ];
+            menuOptions = [{ label: "Adjust date/time variables", action: () => alert("Time Sync Verified.") }];
         } else if (isDesktopSurface) {
             menuOptions = [
-                { label: "Create New Text Document", action: createNewDesktopFile },
+                { label: "Create New Desktop Document", action: createNewDesktopFile },
                 { label: "Refresh Desktop Icons", action: refreshWinDesktop }
             ];
         }
@@ -322,11 +429,10 @@ function closeContextMenu() {
 }
 
 function createNewDesktopFile() {
-    const filename = prompt("Enter new filename context destination (e.g., note.txt):");
+    const filename = prompt("Enter text file destination name (e.g., test.txt):");
     if (!filename) return;
-    const fullPath = `/desktop/${filename}`;
     try {
-        Kernel.vfs.writeFile(fullPath, "// New text element container entry line layout\n", "text/plain");
+        Kernel.vfs.writeFile(`/desktop/${filename}`, "// Write script details\n", "text/plain");
         refreshWinDesktop();
     } catch(e) { alert(e.message); }
 }
@@ -344,7 +450,6 @@ function launchWinApp(type, pathArg = "") {
     document.getElementById("win-start-menu").classList.add("win-menu-hidden");
     closeContextMenu();
 
-    // If an application's window is minimized and hidden, restore its viewport on click
     if (type !== 'start') {
         const existingWin = Array.from(document.querySelectorAll('.kernel-window')).find(el => {
             return el.querySelector('.window-titlebar span').innerText.toLowerCase().includes(type.toLowerCase());
@@ -360,7 +465,7 @@ function launchWinApp(type, pathArg = "") {
             Kernel.process.launchFromFile("/apps/terminal.js").catch(err => alert(err.message));
             break;
         case 'explorer':
-            Kernel.process.launchFromFile("/apps/explorer.js").catch(err => alert(err.message));
+            renderWinExplorerWindow();
             break;
         case 'vscode':
             renderVSCodePortWindow(pathArg);
@@ -444,7 +549,7 @@ function renderVSCodePortWindow(targetFile = "") {
 
     saveBtn.onclick = () => {
         if (!currentOpenPath) {
-            const name = prompt("Enter a filename destination path (e.g. /desktop/code_test.js):");
+            const name = prompt("Enter filename destination path (e.g. /desktop/code_test.js):");
             if (!name) return;
             currentOpenPath = name;
         }
@@ -466,7 +571,7 @@ function renderVSCodePortWindow(targetFile = "") {
 }
 
 /**
- * 🗑️ CUSTOM MODULE: Recycle Bin Application Subsystem
+ * 🗑️ RECYCLE BIN WINDOW
  */
 function renderRecycleBinWindow() {
     const win = Kernel.createWindow({
