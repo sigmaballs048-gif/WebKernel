@@ -158,3 +158,15 @@ export default class CoreTextApplication {
 }
 
 ```
+
+# 🎛️ WebKernel Boot Management & Desktop Interface (v1.3.0)
+
+## 📌 Running the GRUB Menu Locally
+1. Launch `index.html` via **VS Code Live Server** or an allowed local file access flag config.
+2. The browser will drop into a stylized **GNU GRUB Linux-style bootloader layout**.
+3. Use your **Up (↑)** and **Down (↓)** keyboard arrows to swap target selections, then press **Enter** to pass operational tokens into the subsystem core.
+
+### Available Boot Flags:
+* **Standard Mode:** Boots the full system, establishing default theme variations and seeding system directories.
+* **Fallback Console Mode:** Prevents wallpaper initialization arrays from blocking performance on low-spec client sessions.
+* **Recovery Mode:** Directly drops the virtual IndexedDB system schemas, allowing you to force a fresh boot sequence on unaligned file nodes.

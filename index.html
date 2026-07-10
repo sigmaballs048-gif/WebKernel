@@ -10,26 +10,57 @@
             --text-color: #a6adc8;
             --accent-color: #89b4fa;
             --panic-color: #f38ba8;
+            --surface-color: #1e1e2e;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
-        body, html { width: 100vw; height: 100vh; overflow: hidden; background-color: var(--bg-color); font-family: 'Courier New', Courier, monospace; color: var(--text-color); }
-        #boot-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000000; z-index: 999999; display: flex; flex-direction: column; justify-content: flex-start; padding: 40px; overflow-y: auto; }
-        .boot-header { color: var(--accent-color); font-size: 1.5rem; margin-bottom: 20px; font-weight: bold; border-bottom: 2px solid #1e1e2e; padding-bottom: 10px; }
-        .log-line { line-height: 1.6; font-size: 0.9rem; white-space: pre-wrap; }
+        body, html { width: 100vw; height: 100vh; overflow: hidden; background-color: #000000; font-family: 'Courier New', Courier, monospace; color: #ffffff; }
+        
+        /* GRUB Stage Styling */
+        #grub-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000000; z-index: 999999; padding: 40px; display: flex; flex-direction: column; }
+        .grub-border { border: 2px solid #ffffff; padding: 20px; flex: 1; display: flex; flex-direction: column; }
+        .grub-title { text-align: center; margin-bottom: 20px; font-weight: bold; }
+        .grub-list { list-style: none; flex: 1; margin: 20px 0; }
+        .grub-item { padding: 8px 12px; cursor: pointer; margin-bottom: 4px; }
+        .grub-item.selected { background: #ffffff; color: #000000; font-weight: bold; }
+        .grub-footer { border-top: 1px dashed #ffffff; padding-top: 15px; font-size: 0.85rem; line-height: 1.5; }
+
+        /* Traditional Boot Logs Styling */
+        #boot-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000000; z-index: 999998; display: none; flex-direction: column; justify-content: flex-start; padding: 40px; overflow-y: auto; }
+        .boot-header { color: var(--accent-color); font-size: 1.5rem; margin-bottom: 20px; font-weight: bold; border-bottom: 2px solid var(--surface-color); padding-bottom: 10px; }
+        .log-line { line-height: 1.6; font-size: 0.9rem; white-space: pre-wrap; font-family: monospace; color: #a6adc8; }
         .log-success { color: #a6e3a1; }
-        .log-warn { color: #f9e2af; }
         .log-error { color: var(--panic-color); font-weight: bold; }
-        #desktop-root { display: none; width: 100vw; height: 100vh; position: relative; background-size: cover; background-position: center; }
+        
+        #desktop-root { display: none; width: 100vw; height: 100vh; position: relative; }
         .spinner { margin-top: 20px; width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.1); border-left-color: var(--accent-color); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
+    <div id="grub-screen">
+        <div class="grub-border">
+            <div class="grub-title">GNU GRUB version 2.06-WebKernel Core</div>
+            <p>Use the ↑ and ↓ keys to select which entry is highlighted.<br>Press enter to boot the selected OS, 'e' to edit the commands before booting.</p>
+            
+            <ul class="grub-list" id="grub-options">
+                <li class="grub-item selected" data-mode="standard">WebKernel OS (Standard Multi-User Mode)</li>
+                <li class="grub-item" data-mode="fallback">WebKernel OS (Safe Mode / Fallback Console)</li>
+                <li class="grub-item" data-mode="recovery">WebKernel Recovery Utility (Clear VFS Storage Cache)</li>
+            </ul>
+
+            <div class="grub-footer">
+                The highlighted entry will be executed automatically shortly. <br>
+                Configured Selection Target Boot Mode Pointer: <span id="grub-timer" style="color: #a6e3a1;">Awaiting User Input...</span>
+            </div>
+        </div>
+    </div>
+
     <div id="boot-screen">
-        <div class="boot-header">WEBKERNEL BOOTLOADER v1.2.0 (ES2023)</div>
+        <div class="boot-header">WEBKERNEL BOOTLOADER v1.3.0 (GRUB-STAGE)</div>
         <div id="boot-logs"></div>
         <div id="boot-spinner" class="spinner"></div>
     </div>
+
     <div id="desktop-root"></div>
 
     <script src="kernel.js"></script>
@@ -37,10 +68,47 @@
     <script src="api.js"></script>
 
     <script>
-        document.addEventListener("DOMContentLoaded", async () => {
-            const logContainer = document.getElementById("boot-logs");
+        document.addEventListener("DOMContentLoaded", () => {
+            const grubScreen = document.getElementById("grub-screen");
+            const grubOptions = document.getElementById("grub-options");
             const bootScreen = document.getElementById("boot-screen");
+            const logContainer = document.getElementById("boot-logs");
             const desktopRoot = document.getElementById("desktop-root");
+            
+            let selectedIndex = 0;
+            const items = grubOptions.querySelectorAll(".grub-item");
+
+            // Keyboard Intercept Mechanics for GRUB Option Selection Grid
+            const updateGrubSelection = () => {
+                items.forEach((item, idx) => {
+                    if(idx === selectedIndex) item.classList.add("selected");
+                    else item.classList.remove("selected");
+                });
+            };
+
+            window.addEventListener("keydown", (e) => {
+                if (grubScreen.style.display === "none") return;
+                
+                if (e.key === "ArrowDown") {
+                    selectedIndex = (selectedIndex + 1) % items.length;
+                    updateGrubSelection();
+                } else if (e.key === "ArrowUp") {
+                    selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+                    updateGrubSelection();
+                } else if (e.key === "Enter") {
+                    const mode = items[selectedIndex].dataset.mode;
+                    executeBootSequence(mode);
+                }
+            });
+
+            // Fallback Mouse Click Intercept Bounds
+            items.forEach((item, idx) => {
+                item.onclick = () => {
+                    selectedIndex = idx;
+                    updateGrubSelection();
+                    executeBootSequence(item.dataset.mode);
+                };
+            });
 
             const appendLog = (text, type = "") => {
                 const line = document.createElement("div");
@@ -50,37 +118,56 @@
                 bootScreen.scrollTop = bootScreen.scrollHeight;
             };
 
-            try {
-                appendLog("Initializing Core WebKernel Runtime...", "log-success");
-                const kernel = new SystemKernel(appendLog);
+            async function executeBootSequence(bootMode) {
+                grubScreen.style.display = "none";
+                bootScreen.style.display = "flex";
 
-                appendLog("Mounting Persistent Virtual Filesystem Storage Blocks...");
-                await kernel.vfs.mount();
-                appendLog("VFS mounted successfully.", "log-success");
+                if (bootMode === "recovery") {
+                    appendLog("Executing structural cache recovery directive...", "log-error");
+                    indexedDB.deleteDatabase("WebKernel_VFS_Storage");
+                    appendLog("IndexedDB transaction stores cleared completely. Refreshing...", "log-success");
+                    setTimeout(() => location.reload(), 1500);
+                    return;
+                }
 
-                appendLog("Initializing Graphical User Interface Environment Framework...", "log-success");
-                const gui = new WebGUI(kernel, desktopRoot);
-                kernel.setGUIReference(gui);
+                try {
+                    appendLog(`Booting environment targeting profile: [${bootMode.toUpperCase()}]`, "log-success");
+                    appendLog("Initializing Core WebKernel Runtime...", "log-success");
+                    const kernel = new SystemKernel(appendLog);
 
-                appendLog("Instantiating Immutable Public Application Interface Proxies...");
-                window.Kernel = createKernelAPI(kernel, gui);
+                    appendLog("Mounting Persistent Virtual Filesystem Storage Blocks...");
+                    await kernel.vfs.mount();
+                    appendLog("VFS mounted successfully.", "log-success");
 
-                appendLog("Starting Core System Services...");
-                kernel.bootSequence();
+                    if (bootMode === "fallback") {
+                        kernel.registry.set("sys.wallpaper", "#000000");
+                        appendLog("Safe mode state flagged: Disabled wallpaper canvas processing.", "log-error");
+                    }
 
-                gui.refreshDesktopIcons();
+                    appendLog("Initializing Graphical User Interface Environment Framework...", "log-success");
+                    const gui = new WebGUI(kernel, desktopRoot);
+                    kernel.setGUIReference(gui);
 
-                setTimeout(() => {
-                    appendLog("System ready. Passing context handles to Desktop execution...", "log-success");
-                    bootScreen.style.display = "none";
-                    desktopRoot.style.display = "block";
-                    kernel.events.emit("system-ready", { timestamp: Date.now() });
-                }, 1200);
+                    appendLog("Instantiating Immutable Public Application Interface Proxies...");
+                    window.Kernel = createKernelAPI(kernel, gui);
 
-            } catch (panicError) {
-                appendLog(`!!! KERNEL PANIC: INITIALIZATION CRASH !!!`, "log-error");
-                appendLog(`${panicError.stack || panicError}`, "log-error");
-                document.getElementById("boot-spinner").style.display = "none";
+                    appendLog("Starting Core System Services...");
+                    kernel.bootSequence();
+
+                    gui.refreshDesktopIcons();
+
+                    setTimeout(() => {
+                        appendLog("System ready. Passing context handles to Desktop execution...", "log-success");
+                        bootScreen.style.display = "none";
+                        desktopRoot.style.display = "block";
+                        kernel.events.emit("system-ready", { timestamp: Date.now() });
+                    }, 1000);
+
+                } catch (panicError) {
+                    appendLog(`!!! KERNEL PANIC: INITIALIZATION CRASH !!!`, "log-error");
+                    appendLog(`${panicError.stack || panicError}`, "log-error");
+                    document.getElementById("boot-spinner").style.display = "none";
+                }
             }
         });
     </script>

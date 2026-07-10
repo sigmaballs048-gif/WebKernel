@@ -121,7 +121,7 @@ class WebGUI {
                 title: fileRecord.path.split("/").pop(),
                 width: 400,
                 height: 250,
-                content: `<div style="padding:15px; line-height:1.5; white-space:pre-wrap;">${fileRecord.content}</div>`
+                content: `<div style="padding:15px; line-height:1.5; background:#11111b; color:#cdd6f4; height:100%; white-space:pre-wrap;">${fileRecord.content}</div>`
             });
         }
     }
