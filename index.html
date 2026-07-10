@@ -11,91 +11,25 @@
             --accent-color: #89b4fa;
             --panic-color: #f38ba8;
         }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            user-select: none;
-        }
-
-        body, html {
-            width: 100vw;
-            height: 100vh;
-            overflow: hidden;
-            background-color: var(--bg-color);
-            font-family: 'Courier New', Courier, monospace;
-            color: var(--text-color);
-        }
-
-        #boot-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: #000000;
-            z-index: 999999;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-            padding: 40px;
-            overflow-y: auto;
-        }
-
-        .boot-header {
-            color: var(--accent-color);
-            font-size: 1.5rem;
-            margin-bottom: 20px;
-            font-weight: bold;
-            border-bottom: 2px solid #1e1e2e;
-            padding-bottom: 10px;
-        }
-
-        .log-line {
-            line-height: 1.6;
-            font-size: 0.9rem;
-            white-space: pre-wrap;
-        }
-
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        body, html { width: 100vw; height: 100vh; overflow: hidden; background-color: var(--bg-color); font-family: 'Courier New', Courier, monospace; color: var(--text-color); }
+        #boot-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000000; z-index: 999999; display: flex; flex-direction: column; justify-content: flex-start; padding: 40px; overflow-y: auto; }
+        .boot-header { color: var(--accent-color); font-size: 1.5rem; margin-bottom: 20px; font-weight: bold; border-bottom: 2px solid #1e1e2e; padding-bottom: 10px; }
+        .log-line { line-height: 1.6; font-size: 0.9rem; white-space: pre-wrap; }
         .log-success { color: #a6e3a1; }
         .log-warn { color: #f9e2af; }
         .log-error { color: var(--panic-color); font-weight: bold; }
-
-        #desktop-root {
-            display: none;
-            width: 100vw;
-            height: 100vh;
-            position: relative;
-            background-size: cover;
-            background-position: center;
-        }
-
-        /* Spinner for boot visual */
-        .spinner {
-            margin-top: 20px;
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(255,255,255,0.1);
-            border-left-color: var(--accent-color);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        #desktop-root { display: none; width: 100vw; height: 100vh; position: relative; background-size: cover; background-position: center; }
+        .spinner { margin-top: 20px; width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.1); border-left-color: var(--accent-color); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-
     <div id="boot-screen">
         <div class="boot-header">WEBKERNEL BOOTLOADER v1.0.0 (ES2023)</div>
         <div id="boot-logs"></div>
         <div id="boot-spinner" class="spinner"></div>
     </div>
-
     <div id="desktop-root"></div>
 
     <script src="kernel.js"></script>
@@ -124,19 +58,16 @@
                 await kernel.vfs.mount();
                 appendLog("VFS mounted successfully.", "log-success");
 
-                appendLog("Initializing Graphical User Interface Environment Framework...");
+                appendLog("Initializing Graphical User Interface Environment Framework...", "log-success");
                 const gui = new WebGUI(kernel, desktopRoot);
                 kernel.setGUIReference(gui);
-                appendLog("GUI Stage components loaded.", "log-success");
 
                 appendLog("Instantiating Immutable Public Application Interface Proxies...");
                 window.Kernel = createKernelAPI(kernel, gui);
-                appendLog("Public Kernel API bound globally.", "log-success");
 
                 appendLog("Starting Core System Services...");
                 kernel.bootSequence();
 
-                // Mocking visual handoff delay for initialization transitions
                 setTimeout(() => {
                     appendLog("System ready. Passing context handles to Desktop execution...", "log-success");
                     bootScreen.style.display = "none";
