@@ -1,4 +1,4 @@
-Here is the complete, GitHub-ready Markdown documentation for the WebKernel API. You can save this as `API.md` or place it in your repository's Wiki.
+
 
 ```markdown
 # WebKernel API Reference
