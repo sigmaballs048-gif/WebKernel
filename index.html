@@ -44,7 +44,7 @@
             <p>Use the ↑ and ↓ keys to select which entry is highlighted.<br>Press enter to boot the selected OS.</p>
             
             <ul class="grub-list" id="grub-options">
-                <li class="grub-item selected" data-mode="standard">WebKernel OS (Modular DE Launch)</li>
+                <li class="grub-item selected" data-mode="standard">WebKernel OS (Hardcoded DE Mode)</li>
                 <li class="grub-item" data-mode="fallback">WebKernel OS (Safe Mode / Fallback Console)</li>
                 <li class="grub-item" data-mode="recovery">WebKernel Recovery Utility (Terminal Only Mode)</li>
             </ul>
@@ -55,7 +55,7 @@
     </div>
 
     <div id="boot-screen">
-        <div class="boot-header">WEBKERNEL BOOTLOADER v1.5.0 (MODULAR-DE)</div>
+        <div class="boot-header">WEBKERNEL BOOTLOADER v1.6.0 (INTEGRATED-DE)</div>
         <div id="boot-logs"></div>
         <div id="boot-spinner" class="spinner"></div>
     </div>
@@ -115,45 +115,34 @@
 
                 try {
                     appendLog(`Booting environment targeting profile: [${bootMode.toUpperCase()}]`, "log-success");
-                    appendLog("Initializing Core WebKernel Runtime...", "log-success");
+                    appendLog("Initializing Core WebKernel Runtime Component Structures...", "log-success");
                     
                     const kernel = new SystemKernel(appendLog, bootMode);
 
-                    appendLog("Mounting Persistent Virtual Filesystem Storage Blocks (IndexedDB)...");
+                    appendLog("Mounting Persistent Virtual Filesystem Storage Blocks via IndexedDB Core...");
                     await kernel.vfs.mount();
-                    appendLog("VFS mounted successfully.", "log-success");
+                    appendLog("VFS verification completed.", "log-success");
 
-                    if (bootMode === "fallback") {
-                        kernel.registry.set("sys.wallpaper", "#000000");
-                        appendLog("Safe mode state flagged: Disabled wallpaper.", "log-warn");
-                    }
-
-                    appendLog("Initializing Base Graphical Subsystems...", "log-success");
+                    appendLog("Initializing Integrated Graphical Subsystem Components...", "log-success");
                     const gui = new WebGUI(kernel, desktopRoot);
                     kernel.setGUIReference(gui);
 
-                    appendLog("Instantiating Public Application Interface Proxies...");
+                    appendLog("Instantiating Public Application Programming Interface Layer Facades...");
                     window.Kernel = createKernelAPI(kernel, gui);
 
-                    appendLog("Seeding System Folders and Modules...");
+                    appendLog("Seeding System Core Directory Structures...");
                     kernel.bootSequence();
 
                     if (bootMode === "recovery") {
-                        appendLog("Recovery Mode Active: Bypassing DE loading route.", "log-warn");
+                        appendLog("Recovery State Flagged: Bypassing desktop environment initializers.", "log-warn");
                         await kernel.process.launchFromFile("/apps/terminal.js");
                     } else {
-                        appendLog("Scanning VFS for decoupled Desktop Environment shell component...");
-                        if (kernel.vfs.exists("/system/de.js")) {
-                            appendLog("Modular DE detected at /system/de.js! Spawning workspace configuration module...", "log-success");
-                            await kernel.process.launchFromFile("/system/de.js");
-                        } else {
-                            appendLog("DE Module Missing! Dropping back to native app icon grids.", "log-error");
-                            gui.refreshDesktopIcons();
-                        }
+                        appendLog("System Flag Standard: Spawning Hardcoded Desktop Shell Environment Context...", "log-success");
+                        gui.bootstrapDesktopEnvironment();
                     }
 
                     setTimeout(() => {
-                        appendLog("System ready.", "log-success");
+                        appendLog("System validation successful.", "log-success");
                         bootScreen.style.display = "none";
                         desktopRoot.style.display = "block";
                         kernel.events.emit("system-ready", { timestamp: Date.now() });
