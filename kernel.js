@@ -59,6 +59,11 @@ class VirtualFileSystem {
         }
         return matches;
     }
+    clearAll() {
+        this.root.clear();
+        const transaction = this.db.transaction("files", "readwrite");
+        transaction.objectStore("files").clear();
+    }
     remove(path) {
         if (!this.exists(path)) return false;
         for (const key of this.root.keys()) {
@@ -110,28 +115,31 @@ class ProcessManager {
 }
 
 class SystemKernel {
-    constructor(bootLogHook) {
-        this.version = "1.3.0-GRUB"; this.bootLog = bootLogHook || console.log;
+    constructor(bootLogHook, bootMode = "standard") {
+        this.version = "1.4.0-GRUB"; this.bootLog = bootLogHook || console.log;
+        this.bootMode = bootMode;
         this.events = new EventBus(); this.vfs = new VirtualFileSystem(this.bootLog);
         this.process = new ProcessManager(this); this.registry = new Map(); this.gui = null;
         this.registry.set("sys.theme", "dark"); this.registry.set("sys.wallpaper", "linear-gradient(135deg, #11111b 0%, #1e1e2e 100%)");
     }
     setGUIReference(guiInstance) { this.gui = guiInstance; }
-    bootSequence() { this.bootLog("Running diagnostics..."); this._seedSystemDefaultApplications(); }
+    bootSequence() { 
+        this.bootLog("Running WebKernel lifecycle validation protocols..."); 
+        this._seedSystemDefaultApplications(); 
+    }
+    
     _seedSystemDefaultApplications() {
-        ["/apps", "/desktop", "/documents", "/downloads", "/system", "/tmp"].forEach(dir => { if (!this.vfs.exists(dir)) this.vfs.mkdir(dir, "system"); });
-
         const terminalSource = `export default class SystemTerminal {
     static manifest = { name: "System Terminal", version: "1.2.0" };
     init(pid) {
         this.pid = pid; this.currentDirectory = "/";
-        const win = Kernel.createWindow({ title: "Terminal Shell", width: 600, height: 400, x: 50, y: 50 });
+        const win = Kernel.createWindow({ title: "Emergency System Terminal", width: 600, height: 400, x: 50, y: 50 });
         this.container = win.contentElement; this.renderTerminalUI();
     }
     renderTerminalUI() {
         this.container.innerHTML = \`
             <div class="terminal-wrapper" style="background:#0f0f17; color:#a6e3a1; font-family:monospace; font-size:13px; height:100%; display:flex; flex-direction:column; padding:10px; box-sizing:border-box;">
-                <div class="terminal-output" style="flex:1; overflow-y:auto; white-space:pre-wrap; margin-bottom:10px; line-height:1.5;">WebKernel Shell Core Engine\\n\\n</div>
+                <div class="terminal-output" style="flex:1; overflow-y:auto; white-space:pre-wrap; margin-bottom:10px; line-height:1.5;">WebKernel Core Command Line Shell Module.\\n\\n</div>
                 <div class="terminal-input-line" style="display:flex; align-items:center; gap:8px;">
                     <span class="terminal-prompt" style="color:#89b4fa; font-weight:bold;">root@webkernel:<span class="dir-display">\${this.currentDirectory}</span>$</span>
                     <input type="text" class="terminal-input-field" style="flex:1; background:transparent; border:none; color:#cdd6f4; font-family:monospace; font-size:13px; outline:none;" autofocus />
@@ -172,6 +180,21 @@ class SystemKernel {
     }
     destroy() {}
 }`;
+
+        // Check if Recovery Utility execution profile is explicitly flagged
+        if (this.bootMode === "recovery") {
+            this.bootLog("Recovery Flag set: Dropping standard virtual filesystems...");
+            this.vfs.clearAll(); // Flush memory store tree completely
+
+            // Build structural tree containing ONLY the Terminal and ONE singular recovery file
+            this.vfs.mkdir("/apps");
+            this.vfs.writeFile("/apps/terminal.js", terminalSource, "application/javascript", "system");
+            this.vfs.writeFile("/recovery_manifest.txt", "CRITICAL ERROR DETECTED.\nStandard UI disabled.\nUse 'rm' or 'write' commands to service systems.", "text/plain", "system");
+            return; 
+        }
+
+        // Standard Multitask OS initialization flow paths
+        ["/apps", "/desktop", "/documents", "/downloads", "/system", "/tmp"].forEach(dir => { if (!this.vfs.exists(dir)) this.vfs.mkdir(dir, "system"); });
 
         const explorerSource = `export default class FileExplorer {
     static manifest = { name: "File Explorer", version: "1.1.0" };

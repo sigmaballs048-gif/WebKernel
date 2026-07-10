@@ -40,6 +40,13 @@ class WebGUI {
 
     _buildDesktopWorkspaceLayout() {
         this.root.style.background = this.kernel.registry.get("sys.wallpaper");
+        
+        // Render system panels only if we are running standard system configurations
+        if (this.kernel.bootMode === "recovery") {
+            this.root.innerHTML = `<div id="recovery-matrix-boundary" style="position:absolute; inset:0; padding:20px;"></div>`;
+            return;
+        }
+
         this.root.innerHTML = `
             <div id="desktop-grid-matrix" style="position:absolute; top:0; left:0; right:0; bottom:50px; padding:25px; display:grid; grid-template-columns: repeat(auto-fill, 95px); grid-auto-rows: 100px; gap: 15px; align-content: start;"></div>
             <div id="start-menu-overlay" class="start-dock-panel">
@@ -131,6 +138,11 @@ class WebGUI {
         const wrapperNode = document.createElement("div");
         wrapperNode.className = "kernel-window";
         wrapperNode.dataset.windowId = winId;
+
+        // If recovery mode is active, make the terminal fill out the entire display area
+        if (this.kernel.bootMode === "recovery") {
+            Object.assign(options, { x: 10, y: 10, width: window.innerWidth - 20, height: window.innerHeight - 20 });
+        }
 
         Object.assign(wrapperNode.style, {
             top: `${options.y || 100}px`, left: `${options.x || 100}px`,

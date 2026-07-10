@@ -29,6 +29,7 @@
         .boot-header { color: var(--accent-color); font-size: 1.5rem; margin-bottom: 20px; font-weight: bold; border-bottom: 2px solid var(--surface-color); padding-bottom: 10px; }
         .log-line { line-height: 1.6; font-size: 0.9rem; white-space: pre-wrap; font-family: monospace; color: #a6adc8; }
         .log-success { color: #a6e3a1; }
+        .log-warn { color: #f9e2af; }
         .log-error { color: var(--panic-color); font-weight: bold; }
         
         #desktop-root { display: none; width: 100vw; height: 100vh; position: relative; }
@@ -45,7 +46,7 @@
             <ul class="grub-list" id="grub-options">
                 <li class="grub-item selected" data-mode="standard">WebKernel OS (Standard Multi-User Mode)</li>
                 <li class="grub-item" data-mode="fallback">WebKernel OS (Safe Mode / Fallback Console)</li>
-                <li class="grub-item" data-mode="recovery">WebKernel Recovery Utility (Clear VFS Storage Cache)</li>
+                <li class="grub-item" data-mode="recovery">WebKernel Recovery Utility (Terminal Only Mode)</li>
             </ul>
 
             <div class="grub-footer">
@@ -56,7 +57,7 @@
     </div>
 
     <div id="boot-screen">
-        <div class="boot-header">WEBKERNEL BOOTLOADER v1.3.0 (GRUB-STAGE)</div>
+        <div class="boot-header">WEBKERNEL BOOTLOADER v1.4.0 (RECOVERY-COMPLIANT)</div>
         <div id="boot-logs"></div>
         <div id="boot-spinner" class="spinner"></div>
     </div>
@@ -78,7 +79,6 @@
             let selectedIndex = 0;
             const items = grubOptions.querySelectorAll(".grub-item");
 
-            // Keyboard Intercept Mechanics for GRUB Option Selection Grid
             const updateGrubSelection = () => {
                 items.forEach((item, idx) => {
                     if(idx === selectedIndex) item.classList.add("selected");
@@ -96,12 +96,10 @@
                     selectedIndex = (selectedIndex - 1 + items.length) % items.length;
                     updateGrubSelection();
                 } else if (e.key === "Enter") {
-                    const mode = items[selectedIndex].dataset.mode;
-                    executeBootSequence(mode);
+                    executeBootSequence(items[selectedIndex].dataset.mode);
                 }
             });
 
-            // Fallback Mouse Click Intercept Bounds
             items.forEach((item, idx) => {
                 item.onclick = () => {
                     selectedIndex = idx;
@@ -122,18 +120,12 @@
                 grubScreen.style.display = "none";
                 bootScreen.style.display = "flex";
 
-                if (bootMode === "recovery") {
-                    appendLog("Executing structural cache recovery directive...", "log-error");
-                    indexedDB.deleteDatabase("WebKernel_VFS_Storage");
-                    appendLog("IndexedDB transaction stores cleared completely. Refreshing...", "log-success");
-                    setTimeout(() => location.reload(), 1500);
-                    return;
-                }
-
                 try {
                     appendLog(`Booting environment targeting profile: [${bootMode.toUpperCase()}]`, "log-success");
                     appendLog("Initializing Core WebKernel Runtime...", "log-success");
-                    const kernel = new SystemKernel(appendLog);
+                    
+                    // Pass active bootMode profile target directly to the engine
+                    const kernel = new SystemKernel(appendLog, bootMode);
 
                     appendLog("Mounting Persistent Virtual Filesystem Storage Blocks...");
                     await kernel.vfs.mount();
@@ -141,7 +133,7 @@
 
                     if (bootMode === "fallback") {
                         kernel.registry.set("sys.wallpaper", "#000000");
-                        appendLog("Safe mode state flagged: Disabled wallpaper canvas processing.", "log-error");
+                        appendLog("Safe mode state flagged: Disabled wallpaper canvas processing.", "log-warn");
                     }
 
                     appendLog("Initializing Graphical User Interface Environment Framework...", "log-success");
@@ -154,10 +146,16 @@
                     appendLog("Starting Core System Services...");
                     kernel.bootSequence();
 
-                    gui.refreshDesktopIcons();
+                    if (bootMode === "recovery") {
+                        appendLog("Recovery Mode Active: Bypassing desktop environment workspace rendering.", "log-warn");
+                        // Launch a single maximize-style Terminal execution directly
+                        await kernel.process.launchFromFile("/apps/terminal.js");
+                    } else {
+                        gui.refreshDesktopIcons();
+                    }
 
                     setTimeout(() => {
-                        appendLog("System ready. Passing context handles to Desktop execution...", "log-success");
+                        appendLog("System ready. Execution layer passed to active user shell.", "log-success");
                         bootScreen.style.display = "none";
                         desktopRoot.style.display = "block";
                         kernel.events.emit("system-ready", { timestamp: Date.now() });
