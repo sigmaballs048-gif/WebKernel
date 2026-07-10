@@ -41,23 +41,21 @@
     <div id="grub-screen">
         <div class="grub-border">
             <div class="grub-title">GNU GRUB version 2.06-WebKernel Core</div>
-            <p>Use the ↑ and ↓ keys to select which entry is highlighted.<br>Press enter to boot the selected OS, 'e' to edit the commands before booting.</p>
+            <p>Use the ↑ and ↓ keys to select which entry is highlighted.<br>Press enter to boot the selected OS.</p>
             
             <ul class="grub-list" id="grub-options">
-                <li class="grub-item selected" data-mode="standard">WebKernel OS (Standard Multi-User Mode)</li>
+                <li class="grub-item selected" data-mode="standard">WebKernel OS (Modular DE Launch)</li>
                 <li class="grub-item" data-mode="fallback">WebKernel OS (Safe Mode / Fallback Console)</li>
                 <li class="grub-item" data-mode="recovery">WebKernel Recovery Utility (Terminal Only Mode)</li>
             </ul>
-
             <div class="grub-footer">
-                The highlighted entry will be executed automatically shortly. <br>
-                Configured Selection Target Boot Mode Pointer: <span id="grub-timer" style="color: #a6e3a1;">Awaiting User Input...</span>
+                Target Selection Boot Mode Pointer: <span id="grub-timer" style="color: #a6e3a1;">Awaiting User Input...</span>
             </div>
         </div>
     </div>
 
     <div id="boot-screen">
-        <div class="boot-header">WEBKERNEL BOOTLOADER v1.4.0 (RECOVERY-COMPLIANT)</div>
+        <div class="boot-header">WEBKERNEL BOOTLOADER v1.5.0 (MODULAR-DE)</div>
         <div id="boot-logs"></div>
         <div id="boot-spinner" class="spinner"></div>
     </div>
@@ -88,7 +86,6 @@
 
             window.addEventListener("keydown", (e) => {
                 if (grubScreen.style.display === "none") return;
-                
                 if (e.key === "ArrowDown") {
                     selectedIndex = (selectedIndex + 1) % items.length;
                     updateGrubSelection();
@@ -101,11 +98,7 @@
             });
 
             items.forEach((item, idx) => {
-                item.onclick = () => {
-                    selectedIndex = idx;
-                    updateGrubSelection();
-                    executeBootSequence(item.dataset.mode);
-                };
+                item.onclick = () => { selectedIndex = idx; updateGrubSelection(); executeBootSequence(item.dataset.mode); };
             });
 
             const appendLog = (text, type = "") => {
@@ -124,38 +117,43 @@
                     appendLog(`Booting environment targeting profile: [${bootMode.toUpperCase()}]`, "log-success");
                     appendLog("Initializing Core WebKernel Runtime...", "log-success");
                     
-                    // Pass active bootMode profile target directly to the engine
                     const kernel = new SystemKernel(appendLog, bootMode);
 
-                    appendLog("Mounting Persistent Virtual Filesystem Storage Blocks...");
+                    appendLog("Mounting Persistent Virtual Filesystem Storage Blocks (IndexedDB)...");
                     await kernel.vfs.mount();
                     appendLog("VFS mounted successfully.", "log-success");
 
                     if (bootMode === "fallback") {
                         kernel.registry.set("sys.wallpaper", "#000000");
-                        appendLog("Safe mode state flagged: Disabled wallpaper canvas processing.", "log-warn");
+                        appendLog("Safe mode state flagged: Disabled wallpaper.", "log-warn");
                     }
 
-                    appendLog("Initializing Graphical User Interface Environment Framework...", "log-success");
+                    appendLog("Initializing Base Graphical Subsystems...", "log-success");
                     const gui = new WebGUI(kernel, desktopRoot);
                     kernel.setGUIReference(gui);
 
-                    appendLog("Instantiating Immutable Public Application Interface Proxies...");
+                    appendLog("Instantiating Public Application Interface Proxies...");
                     window.Kernel = createKernelAPI(kernel, gui);
 
-                    appendLog("Starting Core System Services...");
+                    appendLog("Seeding System Folders and Modules...");
                     kernel.bootSequence();
 
                     if (bootMode === "recovery") {
-                        appendLog("Recovery Mode Active: Bypassing desktop environment workspace rendering.", "log-warn");
-                        // Launch a single maximize-style Terminal execution directly
+                        appendLog("Recovery Mode Active: Bypassing DE loading route.", "log-warn");
                         await kernel.process.launchFromFile("/apps/terminal.js");
                     } else {
-                        gui.refreshDesktopIcons();
+                        appendLog("Scanning VFS for decoupled Desktop Environment shell component...");
+                        if (kernel.vfs.exists("/system/de.js")) {
+                            appendLog("Modular DE detected at /system/de.js! Spawning workspace configuration module...", "log-success");
+                            await kernel.process.launchFromFile("/system/de.js");
+                        } else {
+                            appendLog("DE Module Missing! Dropping back to native app icon grids.", "log-error");
+                            gui.refreshDesktopIcons();
+                        }
                     }
 
                     setTimeout(() => {
-                        appendLog("System ready. Execution layer passed to active user shell.", "log-success");
+                        appendLog("System ready.", "log-success");
                         bootScreen.style.display = "none";
                         desktopRoot.style.display = "block";
                         kernel.events.emit("system-ready", { timestamp: Date.now() });
