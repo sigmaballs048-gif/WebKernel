@@ -1,5 +1,5 @@
 /**
- * Win11Web Architecture OS Layer Clone
+ * Win11Web Architecture OS Layer Clone (Context Menu Update)
  * Built cleanly on top of the WebKernel API ecosystem.
  */
 
@@ -21,8 +21,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-// Global state variables for our cloned features
+// Global state variables
 let recycleBinStorage = [];
+let currentContextMenu = null;
 
 function initializeWin11OS() {
     console.log(`%c Win11Web Deployment Initialization Complete `, "background: #0078d4; color: #ffffff; font-weight: bold;");
@@ -32,7 +33,7 @@ function initializeWin11OS() {
 
     const root = document.getElementById("desktop-root");
 
-    // 3. Render Windows Layout (Centered taskbar, hidden bottom menus)
+    // 3. Render Windows Layout
     root.innerHTML = `
         <div id="win-desktop-surface"></div>
 
@@ -67,13 +68,13 @@ function initializeWin11OS() {
 
         <div id="win-taskbar">
             <div class="taskbar-center-container">
-                <button id="win-start-trigger" class="taskbar-icon">🪟</button>
-                <button class="taskbar-icon" onclick="launchWinApp('explorer')">📁</button>
-                <button class="taskbar-icon" onclick="launchWinApp('vscode')">🟦</button>
-                <button class="taskbar-icon" onclick="launchWinApp('terminal')">💻</button>
-                <button class="taskbar-icon" onclick="launchWinApp('recycle')">🗑️</button>
+                <button id="win-start-trigger" class="taskbar-icon" data-app-type="start">🪟</button>
+                <button class="taskbar-icon" data-app-type="explorer" onclick="launchWinApp('explorer')">📁</button>
+                <button class="taskbar-icon" data-app-type="vscode" onclick="launchWinApp('vscode')">🟦</button>
+                <button class="taskbar-icon" data-app-type="terminal" onclick="launchWinApp('terminal')">💻</button>
+                <button class="taskbar-icon" data-app-type="recycle" onclick="launchWinApp('recycle')">🗑️</button>
             </div>
-            <div class="taskbar-system-tray">
+            <div class="taskbar-system-tray" id="win-tray-clock-zone">
                 <span id="tray-clock">12:00 PM</span>
             </div>
         </div>
@@ -88,10 +89,17 @@ function initializeWin11OS() {
         startMenu.classList.toggle("win-menu-hidden");
     };
 
-    document.onclick = () => { startMenu.classList.add("win-menu-hidden"); };
+    // Global Click Dismissal Pipeline for Menus
+    document.onclick = () => { 
+        startMenu.classList.add("win-menu-hidden"); 
+        closeContextMenu();
+    };
     startMenu.onclick = (e) => e.stopPropagation();
 
-    // 5. Update system tray real-time clock
+    // 5. Setup Context Menu Interceptors
+    setupContextMenuListeners();
+
+    // 6. Update system tray real-time clock
     setInterval(() => {
         const time = new Date();
         document.getElementById("tray-clock").innerText = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -102,10 +110,127 @@ function initializeWin11OS() {
 }
 
 /**
+ * 🛠️ Context Menu Core Subsystem Engine
+ */
+function setupContextMenuListeners() {
+    const root = document.getElementById("desktop-root");
+
+    // Intercept all right clicks inside the OS workspace container
+    root.oncontextmenu = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        closeContextMenu();
+
+        let menuOptions = [];
+        
+        // Target Identification Tree Checking
+        const targetShortcut = e.target.closest(".win-shortcut-tile");
+        const targetTaskbarApp = e.target.closest(".taskbar-icon");
+        const targetClockZone = e.target.closest("#win-tray-clock-zone");
+        const isDesktopSurface = e.target.id === "win-desktop-surface";
+
+        if (targetShortcut) {
+            const isRecycle = targetShortcut.dataset.isRecycle === "true";
+            const filePath = targetShortcut.dataset.filePath;
+
+            if (isRecycle) {
+                menuOptions = [
+                    { label: "Open Recycle Bin", action: () => launchWinApp('recycle') },
+                    { label: "Empty Recycle Bin", action: () => { recycleBinStorage = []; alert("Recycle bin cleared!"); } }
+                ];
+            } else {
+                menuOptions = [
+                    { label: "Edit in VS Code", action: () => launchWinApp('vscode', filePath) },
+                    { label: "Delete File", action: () => sendFileToRecycleBin(filePath) }
+                ];
+            }
+        } else if (targetTaskbarApp) {
+            const appType = targetTaskbarApp.dataset.appType;
+            menuOptions = [
+                { label: `Launch Application (${appType})`, action: () => launchWinApp(appType === 'start' ? 'terminal' : appType) },
+                { label: "Pin to Taskbar", action: () => console.log("Pinned target module") },
+                { label: "Close all windows", action: () => alert("Closing windows allocated to app") }
+            ];
+        } else if (targetClockZone) {
+            menuOptions = [
+                { label: "Adjust date/time settings", action: () => alert("Time Sync: Syncing with system architecture clock node.") },
+                { label: "Turn off notifications", action: () => alert("Do Not Disturb toggled.") },
+                { label: "Taskbar settings", action: () => alert("Opening personalization settings panel.") }
+            ];
+        } else if (isDesktopSurface) {
+            menuOptions = [
+                { label: "Create New Text Document", action: createNewDesktopFile },
+                { label: "Refresh Desktop Icons", action: refreshWinDesktop },
+                { label: "Change Wallpaper Theme", action: () => {
+                    Kernel.settings.set("sys.wallpaper", "linear-gradient(135deg, #1a1c2e 0%, #0f101b 100%)");
+                    document.getElementById("desktop-root").style.background = Kernel.settings.get("sys.wallpaper");
+                }}
+            ];
+        }
+
+        if (menuOptions.length > 0) {
+            spawnContextMenuElement(e.clientX, e.clientY, menuOptions);
+        }
+    };
+}
+
+function spawnContextMenuElement(x, y, options) {
+    const menuContainer = document.createElement("div");
+    menuContainer.className = "win-context-menu";
+    menuContainer.style.top = `${y}px`;
+    menuContainer.style.left = `${x}px`;
+
+    options.forEach(opt => {
+        const item = document.createElement("div");
+        item.className = "context-menu-item";
+        item.innerText = opt.label;
+        item.onclick = (e) => {
+            e.stopPropagation();
+            opt.action();
+            closeContextMenu();
+        };
+        menuContainer.appendChild(item);
+    });
+
+    document.getElementById("desktop-root").appendChild(menuContainer);
+    currentContextMenu = menuContainer;
+}
+
+function closeContextMenu() {
+    if (currentContextMenu) {
+        currentContextMenu.remove();
+        currentContextMenu = null;
+    }
+}
+
+/**
+ * File Management Extensions
+ */
+function createNewDesktopFile() {
+    const filename = prompt("Enter new filename context destination (e.g., note.txt):");
+    if (!filename) return;
+    const fullPath = `/desktop/${filename}`;
+    try {
+        Kernel.vfs.writeFile(fullPath, "// New text element container entry line layout\n", "text/plain");
+        refreshWinDesktop();
+    } catch(e) { alert(e.message); }
+}
+
+function sendFileToRecycleBin(path) {
+    try {
+        const content = Kernel.vfs.readFile(path);
+        recycleBinStorage.push({ path, content, mimeType: "text/plain" });
+        Kernel.vfs.remove(path);
+        refreshWinDesktop();
+    } catch(e) { alert(e.message); }
+}
+
+/**
  * Custom App Launch Routing Table Options
  */
 function launchWinApp(type, pathArg = "") {
     document.getElementById("win-start-menu").classList.add("win-menu-hidden");
+    closeContextMenu();
 
     switch(type) {
         case 'terminal':
@@ -165,7 +290,6 @@ function renderVSCodePortWindow(targetFile = "") {
 
     let currentOpenPath = targetFile;
 
-    // Load file tree view index on the sidebar panel
     const populateTree = () => {
         treeContainer.innerHTML = "";
         ['/desktop', '/apps', '/documents'].forEach(dir => {
@@ -206,9 +330,7 @@ function renderVSCodePortWindow(targetFile = "") {
             tabTitle.innerText = currentOpenPath.split("/").pop();
             populateTree();
             refreshWinDesktop();
-        } catch(err) {
-            alert("Error saving: " + err.message);
-        }
+        } catch(err) { alert("Error saving: " + err.message); }
     };
 
     populateTree();
@@ -287,6 +409,7 @@ function refreshWinDesktop() {
     // Always append the fixed Recycle Bin tile shortcut
     const recycleNode = document.createElement("div");
     recycleNode.className = "win-shortcut-tile";
+    recycleNode.dataset.isRecycle = "true";
     recycleNode.innerHTML = `<div class="icon-pane">🗑️</div><div class="label-pane">Recycle Bin</div>`;
     recycleNode.onclick = () => launchWinApp('recycle');
     surface.appendChild(recycleNode);
@@ -295,6 +418,7 @@ function refreshWinDesktop() {
         Kernel.vfs.readDir("/desktop").forEach(file => {
             const node = document.createElement("div");
             node.className = "win-shortcut-tile";
+            node.dataset.filePath = file.path;
             const isJs = file.path.endsWith(".js");
 
             node.innerHTML = `
@@ -303,18 +427,11 @@ function refreshWinDesktop() {
                 <button class="delete-icon-overlay" title="Move to Recycle Bin">×</button>
             `;
 
-            // Open in corresponding workflow tool routes
-            node.onclick = (e) => {
-                if (isJs) launchWinApp('vscode', file.path);
-                else launchWinApp('vscode', file.path);
-            };
+            node.onclick = () => launchWinApp('vscode', file.path);
 
-            // Capture Delete actions, intercept data stream, and store in the bin buffer array allocation
             node.querySelector(".delete-icon-overlay").onclick = (e) => {
                 e.stopPropagation();
-                recycleBinStorage.push({ path: file.path, content: file.content, mimeType: file.mimeType });
-                Kernel.vfs.remove(file.path);
-                refreshWinDesktop();
+                sendFileToRecycleBin(file.path);
             };
 
             surface.appendChild(node);
