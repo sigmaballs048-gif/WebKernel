@@ -1,5 +1,5 @@
 /**
- * WebKernel - Architecture Core Graphical User Interface (GUI Engine)
+ * WebKernel - Graphical User Interface (GUI Engine)
  */
 
 class WebGUI {
@@ -8,7 +8,6 @@ class WebGUI {
         this.root = rootDomElement;
         this.windows = new Map();
         this.layerIndexCounter = 1000;
-        this.activeTheme = "dark";
         this._bootstrapUserInterfaceLayer();
     }
 
@@ -22,15 +21,14 @@ class WebGUI {
         const stylesheet = document.createElement("style");
         stylesheet.textContent = `
             :root { --theme-bg: #1e1e2e; --theme-surface: #313244; --theme-text: #cdd6f4; --theme-accent: #89b4fa; --theme-border: #45475a; }
-            .light-mode-vars { --theme-bg: #eff1f5; --theme-surface: #e6e9ef; --theme-text: #4c4f69; --theme-accent: #1e66f5; --theme-border: #bcc0cc; }
-            .kernel-window { position: absolute; background-color: var(--theme-bg); border: 1px solid var(--theme-border); box-shadow: 0 12px 40px rgba(0,0,0,0.4); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; min-width: 200px; min-height: 100px; transition: transform 0.15s ease; }
+            .kernel-window { position: absolute; background-color: var(--theme-bg); border: 1px solid var(--theme-border); box-shadow: 0 12px 40px rgba(0,0,0,0.4); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; min-width: 200px; min-height: 100px; }
             .window-titlebar { background: var(--theme-surface); color: var(--theme-text); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; cursor: move; font-weight: bold; font-size: 13px; border-bottom: 1px solid var(--theme-border); }
             .titlebar-controls { display: flex; gap: 8px; }
             .control-btn { width: 14px; height: 14px; border-radius: 50%; border: none; cursor: pointer; }
             .btn-close { background-color: #f38ba8; }
             .btn-max { background-color: #f9e2af; }
             .btn-min { background-color: #a6e3a1; }
-            .window-body-content { flex: 1; overflow: auto; color: var(--theme-text); position: relative; }
+            .window-body-content { flex: 1; overflow: auto; color: var(--theme-text); position: relative; background: #11111b; }
             .desktop-icon-node { display: flex; flex-direction: column; align-items: center; width: 95px; padding: 12px 6px; cursor: pointer; border-radius: 6px; text-align: center; gap: 8px; color: #ffffff; text-shadow: 1px 2px 4px rgba(0,0,0,0.8); font-size: 12px; }
             .desktop-icon-node:hover { background: rgba(255,255,255,0.15); }
             .start-dock-panel { position: absolute; bottom: 55px; left: 15px; width: 320px; height: 420px; background: var(--theme-bg); border: 1px solid var(--theme-border); border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); display: none; flex-direction: column; z-index: 999999; overflow: hidden; }
@@ -41,8 +39,7 @@ class WebGUI {
     }
 
     _buildDesktopWorkspaceLayout() {
-        const targetWallpaper = this.kernel.registry.get("sys.wallpaper");
-        this.root.style.background = targetWallpaper;
+        this.root.style.background = this.kernel.registry.get("sys.wallpaper");
         this.root.innerHTML = `
             <div id="desktop-grid-matrix" style="position:absolute; top:0; left:0; right:0; bottom:50px; padding:25px; display:grid; grid-template-columns: repeat(auto-fill, 95px); grid-auto-rows: 100px; gap: 15px; align-content: start;"></div>
             <div id="start-menu-overlay" class="start-dock-panel">
@@ -60,9 +57,9 @@ class WebGUI {
 
         launcherTrigger.onclick = (e) => {
             e.stopPropagation();
-            const currentDisplayState = menuOverlay.style.display;
-            menuOverlay.style.display = currentDisplayState === "flex" ? "none" : "flex";
-            if(menuOverlay.style.display === "flex") this._populateLauncherApplications();
+            const isOpen = menuOverlay.style.display === "flex";
+            menuOverlay.style.display = isOpen ? "none" : "flex";
+            if (!isOpen) this._populateLauncherApplications();
         };
 
         this.root.onclick = () => { menuOverlay.style.display = "none"; };
@@ -87,7 +84,6 @@ class WebGUI {
         staticVirtualDesktopFiles.forEach(fileRecord => {
             const iconNode = document.createElement("div");
             iconNode.className = "desktop-icon-node";
-            
             const isJs = fileRecord.path.endsWith(".js");
             iconNode.innerHTML = `
                 <div style="font-size:2.2rem;">${isJs ? "⚙️" : (fileRecord.type === "directory" ? "📁" : "📄")}</div>
@@ -119,21 +115,21 @@ class WebGUI {
 
     _handleIconExecutionRoute(fileRecord) {
         if(fileRecord.path.endsWith(".js")) {
-            this.kernel.process.launchFromFile(fileRecord.path).catch(err => alert(`Workflow Error: ${err.message}`));
+            this.kernel.process.launchFromFile(fileRecord.path).catch(err => alert(err.message));
         } else {
             this.createWindow({
                 title: fileRecord.path.split("/").pop(),
-                width: 350,
-                height: 200,
-                content: `<div style="padding:15px; font-family:sans-serif; line-height:1.5;">${fileRecord.content}</div>`
+                width: 400,
+                height: 250,
+                content: `<div style="padding:15px; line-height:1.5; white-space:pre-wrap;">${fileRecord.content}</div>`
             });
         }
     }
 
     createWindow(options) {
-        const winId = `win_session_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        const winId = `win_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
         const wrapperNode = document.createElement("div");
-        wrapperNode.className = `kernel-window ${this.activeTheme === "light" ? "light-mode-vars" : ""}`;
+        wrapperNode.className = "kernel-window";
         wrapperNode.dataset.windowId = winId;
 
         Object.assign(wrapperNode.style, {
@@ -144,7 +140,7 @@ class WebGUI {
 
         wrapperNode.innerHTML = `
             <div class="window-titlebar">
-                <span>${options.title || "Application Container"}</span>
+                <span>${options.title || "Container"}</span>
                 <div class="titlebar-controls">
                     <button class="control-btn btn-min"></button>
                     <button class="control-btn btn-max"></button>
@@ -180,21 +176,21 @@ class WebGUI {
     }
 
     _applyDragCapabilities(windowFrame) {
-        const interactiveBar = windowFrame.querySelector(".window-titlebar");
-        let activeX = 0, activeY = 0, initialClientX = 0, initialClientY = 0;
+        const titlebar = windowFrame.querySelector(".window-titlebar");
+        let activeX = 0, activeY = 0, initialX = 0, initialY = 0;
 
-        interactiveBar.onmousedown = (e) => {
+        titlebar.onmousedown = (e) => {
             e.preventDefault();
             this.focusWindow(windowFrame.dataset.windowId);
-            initialClientX = e.clientX;
-            initialClientY = e.clientY;
+            initialX = e.clientX;
+            initialY = e.clientY;
 
             document.onmousemove = (moveEvent) => {
                 moveEvent.preventDefault();
-                activeX = initialClientX - moveEvent.clientX;
-                activeY = initialClientY - moveEvent.clientY;
-                initialClientX = moveEvent.clientX;
-                initialClientY = moveEvent.clientY;
+                activeX = initialX - moveEvent.clientX;
+                activeY = initialY - moveEvent.clientY;
+                initialX = moveEvent.clientX;
+                initialY = moveEvent.clientY;
                 windowFrame.style.top = `${windowFrame.offsetTop - activeY}px`;
                 windowFrame.style.left = `${windowFrame.offsetLeft - activeX}px`;
             };
@@ -215,14 +211,5 @@ class WebGUI {
             trayBtn.onclick = () => this.focusWindow(uniqueId);
             container.appendChild(trayBtn);
         });
-    }
-
-    toggleThemeEngine() {
-        this.activeTheme = this.activeTheme === "dark" ? "light" : "dark";
-        this.windows.forEach(winFrame => {
-            if(this.activeTheme === "light") winFrame.classList.add("light-mode-vars");
-            else winFrame.classList.remove("light-mode-vars");
-        });
-        this.kernel.events.emit("theme-changed", { theme: this.activeTheme });
     }
 }
