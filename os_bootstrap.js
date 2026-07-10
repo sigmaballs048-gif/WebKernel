@@ -1,14 +1,16 @@
 /**
- * Win11Web Architecture OS Layer Clone (File Explorer & VS Code Integration)
+ * Win11Web Architecture OS Layer Clone - Complete Master Suite
  * Built cleanly on top of the WebKernel API ecosystem.
  */
 
 document.addEventListener("DOMContentLoaded", () => {
+    // 1. Inject Windows stylesheet rules
     const osStyles = document.createElement("link");
     osStyles.rel = "stylesheet";
     osStyles.href = "os_style.css";
     document.head.appendChild(osStyles);
 
+    // 2. Poll safely for Kernel API availability, then launch BIOS sequence
     window.addEventListener("load", () => {
         const bootTimer = setInterval(() => {
             if (window.Kernel) {
@@ -21,10 +23,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-// Global state variables
+// Global state tracking allocations
 let recycleBinStorage = [];
 let currentContextMenu = null;
-const windowHistoryState = new Map();
+const windowHistoryState = new Map(); // Tracks maximized sizing configurations
 
 /**
  * 📟 VIRTUAL BIOS SUBSYSTEM
@@ -64,22 +66,29 @@ function runVirtualBIOS(onComplete) {
             line.innerText = `> ${logs[currentIdx]}`;
             logOutput.appendChild(line);
             currentIdx++;
-            setTimeout(printNextLog, Math.random() * 150 + 50);
+            setTimeout(printNextLog, Math.random() * 120 + 40);
         } else {
             setTimeout(() => {
-                root.innerHTML = "";
+                root.innerHTML = ""; // Wipe BIOS display
                 onComplete();
-            }, 500);
+            }, 400);
         }
     }
     setTimeout(printNextLog, 200);
 }
 
+/**
+ * 🚀 OS CORE GRAPHICAL RUNTIME INITIALIZATION
+ */
 function initializeWin11OS() {
+    console.log(`%c Win11Web Deployment Initialization Complete `, "background: #0078d4; color: #ffffff; font-weight: bold;");
+
+    // Set fallback default wallpaper parameters
     Kernel.settings.set("sys.wallpaper", "linear-gradient(135deg, #060b19 0%, #0a1128 100%)");
     const root = document.getElementById("desktop-root");
     root.style.background = Kernel.settings.get("sys.wallpaper");
 
+    // 3. Render Desktop Workspace & Centered Taskbar Framework Strip
     root.innerHTML = `
         <div id="win-desktop-surface"></div>
 
@@ -126,10 +135,12 @@ function initializeWin11OS() {
         </div>
     `;
 
+    // 4. Connect Window Lifecycle Hooks to Inject Resizing grips and Window Control Handlers
     Kernel.events.on("window-opened", (data) => {
         injectAdvancedWindowControls(data.winId);
     });
 
+    // 5. Setup Action Triggers & Close Signals
     const startTrigger = document.getElementById("win-start-trigger");
     const startMenu = document.getElementById("win-start-menu");
 
@@ -144,8 +155,10 @@ function initializeWin11OS() {
     };
     startMenu.onclick = (e) => e.stopPropagation();
 
+    // 6. Spin up Global Right Click Interceptors
     setupContextMenuListeners();
 
+    // 7. Keep real-time system clock accurate
     setInterval(() => {
         const time = new Date();
         document.getElementById("tray-clock").innerText = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -155,7 +168,7 @@ function initializeWin11OS() {
 }
 
 /**
- * 🪟 WINDOW MANAGEMENT INTERFACES (Resize, Maximize, Minimize Controls)
+ * 🪟 ADVANCED WINDOWS MANAGEMENT INTERFACES (Resize, Maximize, Minimize Handlers)
  */
 function injectAdvancedWindowControls(winId) {
     const winElement = document.querySelector(`[data-window-id="${winId}"]`);
@@ -195,6 +208,7 @@ function injectAdvancedWindowControls(winId) {
         };
     }
 
+    // Append Corner Resize Grip Node
     const resizeGrip = document.createElement("div");
     resizeGrip.className = "win-resize-grip";
     winElement.appendChild(resizeGrip);
@@ -224,11 +238,7 @@ function injectAdvancedWindowControls(winId) {
 }
 
 /**
- * 📁 ADVANCED INTEGRATION: Windows 11 File Explorer Application
- */
-/**
- * 📁 ADVANCED INTEGRATION: Windows 11 File Explorer Application
- * Now with full support for nested folders, directory traversal, and distinct icons!
+ * 📁 CUSTOM PORTS: Windows 11 File Explorer Application
  */
 function renderWinExplorerWindow(initialDir = "/desktop") {
     const win = Kernel.createWindow({
@@ -242,7 +252,6 @@ function renderWinExplorerWindow(initialDir = "/desktop") {
     let currentDir = initialDir;
 
     const renderContents = () => {
-        // Clean up trailing slashes for neat path formatting
         if (currentDir !== "/" && currentDir.endsWith("/")) {
             currentDir = currentDir.slice(0, -1);
         }
@@ -266,13 +275,12 @@ function renderWinExplorerWindow(initialDir = "/desktop") {
                     </div>
                     <div class="exp-main-pane" id="exp-grid-view" data-current-dir="${currentDir}"></div>
                 </div>
-                <div class="exp-statusbar">Object references counted. Connected to VS Code layer mapping.</div>
+                <div class="exp-statusbar">Connected to the shared kernel VFS architecture layer.</div>
             </div>
         `;
 
         const gridView = win.contentElement.querySelector("#exp-grid-view");
 
-        // Bind Sidebar Links Dynamically
         win.contentElement.querySelectorAll(".exp-side-item").forEach(item => {
             if (item.dataset.targetPath === currentDir) item.classList.add("active");
             item.onclick = () => {
@@ -281,11 +289,10 @@ function renderWinExplorerWindow(initialDir = "/desktop") {
             };
         });
 
-        // Parse VFS Files & Folders
         try {
             const nodes = Kernel.vfs.readDir(currentDir);
             if (nodes.length === 0) {
-                gridView.innerHTML = `<div class="exp-empty-state">This folder is completely empty.</div>`;
+                gridView.innerHTML = `<div class="exp-empty-state">This folder is empty.</div>`;
             }
 
             nodes.forEach(node => {
@@ -293,12 +300,10 @@ function renderWinExplorerWindow(initialDir = "/desktop") {
                 itemEl.className = "exp-file-card";
                 itemEl.dataset.filePath = node.path;
                 
-                // 🔍 SMART CHECK: Is it a directory or a file?
-                // Checks if kernel explicitly flags it as a dir, or if it lacks a file extension type
-                const isDirectory = node.type === 'dir' || node.type === 'directory' || (!node.path.includes('.'));
+                // 🔍 Identify directories dynamically
+                const isDirectory = node.type === 'dir' || node.type === 'directory' || (!node.path.split('/').pop().includes('.'));
                 const isJs = node.path.endsWith(".js");
 
-                // Assign the correct icon based on object type
                 let icon = "📄";
                 if (isDirectory) icon = "📁";
                 else if (isJs) icon = "🟦";
@@ -308,14 +313,12 @@ function renderWinExplorerWindow(initialDir = "/desktop") {
                     <div class="file-card-label">${node.path.split("/").pop()}</div>
                 `;
 
-                // DOUBLE CLICK ROUTING PIPELINE
+                // Handle routing based on item type
                 itemEl.ondblclick = () => {
                     if (isDirectory) {
-                        // Move down into the folder instead of opening code editor
                         currentDir = node.path;
                         renderContents();
                     } else {
-                        // Fire up VS Code for raw files
                         launchWinApp('vscode', node.path);
                     }
                 };
@@ -323,10 +326,9 @@ function renderWinExplorerWindow(initialDir = "/desktop") {
                 gridView.appendChild(itemEl);
             });
         } catch(e) {
-            gridView.innerHTML = `<div class="exp-empty-state" style="color:#f38ba8;">Failed loading files: ${e.message}</div>`;
+            gridView.innerHTML = `<div class="exp-empty-state" style="color:#f38ba8;">Error loading node items: ${e.message}</div>`;
         }
 
-        // Up Arrow Navigation Action
         win.contentElement.querySelector("#exp-btn-up").onclick = () => {
             if (currentDir === "/" || currentDir === "") return;
             const segments = currentDir.split("/").filter(Boolean);
@@ -336,56 +338,12 @@ function renderWinExplorerWindow(initialDir = "/desktop") {
         };
     };
 
-    win.contentElement.refreshExplorerInstance = () => renderContents();
-    renderContents();
-}
-
-        // Parse VFS Files
-        try {
-            const nodes = Kernel.vfs.readDir(currentDir);
-            if (nodes.length === 0) {
-                gridView.innerHTML = `<div class="exp-empty-state">This folder is completely empty.</div>`;
-            }
-
-            nodes.forEach(node => {
-                const itemEl = document.createElement("div");
-                itemEl.className = "exp-file-card";
-                itemEl.dataset.filePath = node.path;
-                const isJs = node.path.endsWith(".js");
-
-                itemEl.innerHTML = `
-                    <div class="file-card-icon">${isJs ? "🟦" : "📄"}</div>
-                    <div class="file-card-label">${node.path.split("/").pop()}</div>
-                `;
-
-                // DOUBLE CLICK -> Launch right inside our VS Code app!
-                itemEl.ondblclick = () => {
-                    launchWinApp('vscode', node.path);
-                };
-
-                gridView.appendChild(itemEl);
-            });
-        } catch(e) {
-            gridView.innerHTML = `<div class="exp-empty-state" style="color:#f38ba8;">Failed loading files: ${e.message}</div>`;
-        }
-
-        // Up Arrow Navigation Action
-        win.contentElement.querySelector("#exp-btn-up").onclick = () => {
-            if (currentDir === "/" || currentDir === "") return;
-            const segments = currentDir.split("/").filter(Boolean);
-            segments.pop();
-            currentDir = "/" + segments.join("/");
-            renderContents();
-        };
-    };
-
-    // Expose local component reload to global viewport managers
     win.contentElement.refreshExplorerInstance = () => renderContents();
     renderContents();
 }
 
 /**
- * 🛠️ CONTEXT MENU CONTROLLERS & INTERCEPTORS
+ * 🛠️ CONTEXT MENU ROUTING INTERCEPTORS
  */
 function setupContextMenuListeners() {
     const root = document.getElementById("desktop-root");
@@ -404,37 +362,40 @@ function setupContextMenuListeners() {
         const targetExpPane = e.target.closest(".exp-main-pane");
         const isDesktopSurface = e.target.id === "win-desktop-surface";
 
-        // 1. Right Clicked a File inside File Explorer!
         if (targetExpFile) {
             const filePath = targetExpFile.dataset.filePath;
+            const isDir = !filePath.split('/').pop().includes('.');
+            
             menuOptions = [
-                { label: "🚀 Open in VS Code", action: () => launchWinApp('vscode', filePath) },
-                { label: "🗑️ Delete File", action: () => {
+                isDir ? { label: "📁 Open Folder View", action: () => {
+                    const expContainer = targetExpFile.closest('.exp-window-container').parentNode;
+                    renderWinExplorerWindow(filePath);
+                    expContainer.remove(); // Clean up old workspace window reference
+                }} : { label: "🚀 Open in VS Code", action: () => launchWinApp('vscode', filePath) },
+                { label: "🗑️ Delete Reference", action: () => {
                     sendFileToRecycleBin(filePath);
                     const expWin = targetExpFile.closest('.exp-window-container').parentNode;
                     if (expWin.refreshExplorerInstance) expWin.refreshExplorerInstance();
                 }}
             ];
         } 
-        // 2. Right Clicked Blank Empty Space inside File Explorer!
         else if (targetExpPane) {
             const activeDir = targetExpPane.dataset.currentDir;
             menuOptions = [
-                { label: "➕ Create New Script File", action: () => {
-                    const filename = prompt("Enter text file destination name (e.g., app.js):");
+                { label: "➕ Create New File Container", action: () => {
+                    const filename = prompt("Enter target filename (e.g. format.js):");
                     if (!filename) return;
-                    Kernel.vfs.writeFile(`${activeDir}/${filename}`, "// Code file context container\n", "text/plain");
+                    Kernel.vfs.writeFile(`${activeDir}/${filename}`, "// Code file details\n", "text/plain");
                     const expWin = targetExpPane.closest('.exp-window-container').parentNode;
                     if (expWin.refreshExplorerInstance) expWin.refreshExplorerInstance();
                     refreshWinDesktop();
                 }},
-                { label: "🔄 Refresh Folder View", action: () => {
+                { label: "🔄 Refresh Grid Layout", action: () => {
                     const expWin = targetExpPane.closest('.exp-window-container').parentNode;
                     if (expWin.refreshExplorerInstance) expWin.refreshExplorerInstance();
                 }}
             ];
         }
-        // 3. Right Clicked standard Desktop Icons
         else if (targetShortcut) {
             const isRecycle = targetShortcut.dataset.isRecycle === "true";
             const filePath = targetShortcut.dataset.filePath;
@@ -442,7 +403,7 @@ function setupContextMenuListeners() {
             if (isRecycle) {
                 menuOptions = [
                     { label: "Open Recycle Bin", action: () => launchWinApp('recycle') },
-                    { label: "Empty Recycle Bin", action: () => { recycleBinStorage = []; alert("Recycle bin cleared!"); } }
+                    { label: "Empty Recycle Bin", action: () => { recycleBinStorage = []; refreshWinDesktop(); } }
                 ];
             } else {
                 menuOptions = [
@@ -452,9 +413,9 @@ function setupContextMenuListeners() {
             }
         } else if (targetTaskbarApp) {
             const appType = targetTaskbarApp.dataset.appType;
-            menuOptions = [{ label: `Launch ${appType}`, action: () => launchWinApp(appType === 'start' ? 'terminal' : appType) }];
+            menuOptions = [{ label: `Launch Application Module (${appType})`, action: () => launchWinApp(appType === 'start' ? 'terminal' : appType) }];
         } else if (targetClockZone) {
-            menuOptions = [{ label: "Adjust date/time variables", action: () => alert("Time Sync Verified.") }];
+            menuOptions = [{ label: "Sync System Clock Tick Rate", action: () => alert("Network Synchronization complete.") }];
         } else if (isDesktopSurface) {
             menuOptions = [
                 { label: "Create New Desktop Document", action: createNewDesktopFile },
@@ -498,10 +459,10 @@ function closeContextMenu() {
 }
 
 function createNewDesktopFile() {
-    const filename = prompt("Enter text file destination name (e.g., test.txt):");
+    const filename = prompt("Enter target element descriptor filename (e.g., config.js):");
     if (!filename) return;
     try {
-        Kernel.vfs.writeFile(`/desktop/${filename}`, "// Write script details\n", "text/plain");
+        Kernel.vfs.writeFile(`/desktop/${filename}`, "// Custom asset entry text data matrix\n", "text/plain");
         refreshWinDesktop();
     } catch(e) { alert(e.message); }
 }
@@ -618,7 +579,7 @@ function renderVSCodePortWindow(targetFile = "") {
 
     saveBtn.onclick = () => {
         if (!currentOpenPath) {
-            const name = prompt("Enter filename destination path (e.g. /desktop/code_test.js):");
+            const name = prompt("Enter target destination directory (e.g. /desktop/code.js):");
             if (!name) return;
             currentOpenPath = name;
         }
@@ -627,7 +588,7 @@ function renderVSCodePortWindow(targetFile = "") {
             tabTitle.innerText = currentOpenPath.split("/").pop();
             populateTree();
             refreshWinDesktop();
-        } catch(err) { alert("Error saving: " + err.message); }
+        } catch(err) { alert("Error saving changes: " + err.message); }
     };
 
     populateTree();
@@ -640,7 +601,7 @@ function renderVSCodePortWindow(targetFile = "") {
 }
 
 /**
- * 🗑️ RECYCLE BIN WINDOW
+ * 🗑️ RECYCLE BIN SUBSYSTEM WINDOW VIEW
  */
 function renderRecycleBinWindow() {
     const win = Kernel.createWindow({
@@ -689,12 +650,16 @@ function renderRecycleBinWindow() {
         win.contentElement.querySelector("#empty-bin-btn").onclick = () => {
             recycleBinStorage = [];
             renderContents();
+            refreshWinDesktop();
         };
     };
 
     renderContents();
 }
 
+/**
+ * RE-DRAW DESKTOP WORKSPACE GRID MAPPINGS
+ */
 function refreshWinDesktop() {
     const surface = document.getElementById("win-desktop-surface");
     if (!surface) return;
